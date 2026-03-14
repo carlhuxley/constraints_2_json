@@ -1,0 +1,9 @@
+Column Name,Data Type,Length,Nullable,Valid_Values,Business_Rule,Description
+customer_id,NUMBER,10,N,,,Primary key for customer table
+customer_name,VARCHAR,100,N,,,Full name of the customer
+customer_age,NUMBER,3,N,,Must be 18 or older. Maximum age 120.,Customer age in years
+status,VARCHAR,20,N,ACTIVE|INACTIVE|PENDING,,Account status
+street,VARCHAR,200,Y,,,Street address line 1
+city,VARCHAR,100,Y,,,City name
+state_code,VARCHAR,2,Y,,Must be valid US state code (2 uppercase letters),US state code
+zipcode,VARCHAR,10,Y,,Must be 5 or 9 digits,Postal ZIP code

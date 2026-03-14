@@ -1,0 +1,36 @@
+{
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "integer",
+      "description": "Unique customer identifier"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "customer_age": {
+      "type": "integer",
+      "description": "Customer's age"
+    },
+    "status": {
+      "type": "string"
+    },
+    "address": {
+      "type": "object",
+      "properties": {
+        "street": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "state_code": {
+          "type": "string"
+        },
+        "zipcode": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
