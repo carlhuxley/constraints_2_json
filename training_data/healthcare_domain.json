@@ -1,0 +1,262 @@
+{
+  "domain": "healthcare",
+  "description": "Business rule to JSON Schema constraint pairs for healthcare/medical domain",
+  "examples": [
+    {"input": "Patient age must be between 0 and 150", "output": {"minimum": 0, "maximum": 150}},
+    {"input": "Age cannot be negative", "output": {"minimum": 0}},
+    {"input": "Patient age: 0-150 years", "output": {"minimum": 0, "maximum": 150}},
+    {"input": "Age must be 0 or greater", "output": {"minimum": 0}},
+
+    {"input": "MRN must be 8 alphanumeric characters", "output": {"pattern": "^[A-Z0-9]{8}$"}},
+    {"input": "Medical Record Number: 8 characters", "output": {"pattern": "^[A-Z0-9]{8}$"}},
+    {"input": "MRN format: 8 alphanumeric", "output": {"pattern": "^[A-Z0-9]{8}$"}},
+    {"input": "Patient MRN is 8 character identifier", "output": {"pattern": "^[A-Z0-9]{8}$"}},
+
+    {"input": "MRN must be 10 digits", "output": {"pattern": "^[0-9]{10}$"}},
+    {"input": "Medical record number: 10 numeric characters", "output": {"pattern": "^[0-9]{10}$"}},
+
+    {"input": "Blood type: A+, A-, B+, B-, O+, O-, AB+, AB-", "output": {"enum": ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]}},
+    {"input": "Blood type must be A+, A-, B+, B-, O+, O-, AB+, or AB-", "output": {"enum": ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]}},
+    {"input": "Valid blood types: A+, A-, B+, B-, O+, O-, AB+, AB-", "output": {"enum": ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"]}},
+
+    {"input": "Dosage cannot exceed 1000mg", "output": {"maximum": 1000}},
+    {"input": "Maximum dosage is 1000 mg", "output": {"maximum": 1000}},
+    {"input": "Dosage must not exceed 1000 milligrams", "output": {"maximum": 1000}},
+    {"input": "Max dose: 1000mg", "output": {"maximum": 1000}},
+
+    {"input": "Dosage must be between 0.1 and 500 mg", "output": {"minimum": 0.1, "maximum": 500}},
+    {"input": "Dose range: 0.1mg to 500mg", "output": {"minimum": 0.1, "maximum": 500}},
+    {"input": "Dosage: minimum 0.1, maximum 500", "output": {"minimum": 0.1, "maximum": 500}},
+
+    {"input": "Dosage must be positive", "output": {"exclusiveMinimum": 0}},
+    {"input": "Dose must be greater than 0", "output": {"exclusiveMinimum": 0}},
+    {"input": "Dosage cannot be zero or negative", "output": {"exclusiveMinimum": 0}},
+
+    {"input": "Gender: Male, Female, Other, Unknown", "output": {"enum": ["Male", "Female", "Other", "Unknown"]}},
+    {"input": "Gender must be Male, Female, Other, or Unknown", "output": {"enum": ["Male", "Female", "Other", "Unknown"]}},
+    {"input": "Valid gender values: Male, Female, Other, Unknown", "output": {"enum": ["Male", "Female", "Other", "Unknown"]}},
+
+    {"input": "Sex: M, F, U", "output": {"enum": ["M", "F", "U"]}},
+    {"input": "Administrative sex must be M, F, or U", "output": {"enum": ["M", "F", "U"]}},
+    {"input": "Sex code: M (Male), F (Female), U (Unknown)", "output": {"enum": ["M", "F", "U"]}},
+
+    {"input": "Patient status: ACTIVE, INACTIVE, DECEASED, MERGED", "output": {"enum": ["ACTIVE", "INACTIVE", "DECEASED", "MERGED"]}},
+    {"input": "Status must be ACTIVE, INACTIVE, DECEASED, or MERGED", "output": {"enum": ["ACTIVE", "INACTIVE", "DECEASED", "MERGED"]}},
+
+    {"input": "Encounter status: PLANNED, ARRIVED, IN_PROGRESS, FINISHED, CANCELLED", "output": {"enum": ["PLANNED", "ARRIVED", "IN_PROGRESS", "FINISHED", "CANCELLED"]}},
+    {"input": "Visit status: PLANNED, ARRIVED, IN_PROGRESS, FINISHED, CANCELLED", "output": {"enum": ["PLANNED", "ARRIVED", "IN_PROGRESS", "FINISHED", "CANCELLED"]}},
+
+    {"input": "Appointment status: SCHEDULED, CONFIRMED, CHECKED_IN, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW", "output": {"enum": ["SCHEDULED", "CONFIRMED", "CHECKED_IN", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"]}},
+
+    {"input": "Priority: ROUTINE, URGENT, EMERGENT, STAT", "output": {"enum": ["ROUTINE", "URGENT", "EMERGENT", "STAT"]}},
+    {"input": "Order priority must be ROUTINE, URGENT, EMERGENT, or STAT", "output": {"enum": ["ROUTINE", "URGENT", "EMERGENT", "STAT"]}},
+
+    {"input": "NPI must be exactly 10 digits", "output": {"pattern": "^[0-9]{10}$"}},
+    {"input": "National Provider Identifier: 10 digits", "output": {"pattern": "^[0-9]{10}$"}},
+    {"input": "NPI format: 10 numeric characters", "output": {"pattern": "^[0-9]{10}$"}},
+    {"input": "Provider NPI is 10 digit number", "output": {"pattern": "^[0-9]{10}$"}},
+
+    {"input": "DEA number format: 2 letters followed by 7 digits", "output": {"pattern": "^[A-Z]{2}[0-9]{7}$"}},
+    {"input": "DEA number must be 2 letters and 7 numbers", "output": {"pattern": "^[A-Z]{2}[0-9]{7}$"}},
+    {"input": "DEA format: AA0000000", "output": {"pattern": "^[A-Z]{2}[0-9]{7}$"}},
+
+    {"input": "ICD-10 code format", "output": {"pattern": "^[A-Z][0-9]{2}(\\.[0-9A-Z]{1,4})?$"}},
+    {"input": "ICD-10 diagnosis code format: A00.0000", "output": {"pattern": "^[A-Z][0-9]{2}(\\.[0-9A-Z]{1,4})?$"}},
+
+    {"input": "CPT code must be 5 digits", "output": {"pattern": "^[0-9]{5}$"}},
+    {"input": "CPT procedure code: 5 numeric digits", "output": {"pattern": "^[0-9]{5}$"}},
+    {"input": "CPT format: 00000", "output": {"pattern": "^[0-9]{5}$"}},
+
+    {"input": "HCPCS code: letter followed by 4 digits", "output": {"pattern": "^[A-Z][0-9]{4}$"}},
+    {"input": "HCPCS format: A0000", "output": {"pattern": "^[A-Z][0-9]{4}$"}},
+
+    {"input": "NDC code must be 11 digits", "output": {"pattern": "^[0-9]{11}$"}},
+    {"input": "National Drug Code: 11 numeric characters", "output": {"pattern": "^[0-9]{11}$"}},
+    {"input": "NDC format: 11 digits", "output": {"pattern": "^[0-9]{11}$"}},
+
+    {"input": "NDC format: 5-4-2 with dashes", "output": {"pattern": "^[0-9]{5}-[0-9]{4}-[0-9]{2}$"}},
+    {"input": "NDC must be in format 00000-0000-00", "output": {"pattern": "^[0-9]{5}-[0-9]{4}-[0-9]{2}$"}},
+
+    {"input": "Heart rate must be between 30 and 250 bpm", "output": {"minimum": 30, "maximum": 250}},
+    {"input": "Heart rate range: 30-250", "output": {"minimum": 30, "maximum": 250}},
+    {"input": "Pulse: 30 to 250 beats per minute", "output": {"minimum": 30, "maximum": 250}},
+
+    {"input": "Systolic BP must be between 50 and 300", "output": {"minimum": 50, "maximum": 300}},
+    {"input": "Systolic blood pressure: 50-300 mmHg", "output": {"minimum": 50, "maximum": 300}},
+    {"input": "Systolic pressure range: 50 to 300", "output": {"minimum": 50, "maximum": 300}},
+
+    {"input": "Diastolic BP must be between 30 and 200", "output": {"minimum": 30, "maximum": 200}},
+    {"input": "Diastolic blood pressure: 30-200 mmHg", "output": {"minimum": 30, "maximum": 200}},
+    {"input": "Diastolic pressure range: 30 to 200", "output": {"minimum": 30, "maximum": 200}},
+
+    {"input": "Temperature must be between 90 and 110 degrees F", "output": {"minimum": 90, "maximum": 110}},
+    {"input": "Body temperature: 90-110°F", "output": {"minimum": 90, "maximum": 110}},
+    {"input": "Temp range: 90 to 110 Fahrenheit", "output": {"minimum": 90, "maximum": 110}},
+
+    {"input": "Temperature must be between 32 and 43 degrees C", "output": {"minimum": 32, "maximum": 43}},
+    {"input": "Body temperature: 32-43°C", "output": {"minimum": 32, "maximum": 43}},
+
+    {"input": "Respiratory rate must be between 5 and 60", "output": {"minimum": 5, "maximum": 60}},
+    {"input": "Respiration rate: 5-60 breaths per minute", "output": {"minimum": 5, "maximum": 60}},
+
+    {"input": "Oxygen saturation must be between 0 and 100", "output": {"minimum": 0, "maximum": 100}},
+    {"input": "SpO2 range: 0-100%", "output": {"minimum": 0, "maximum": 100}},
+    {"input": "O2 sat: 0 to 100 percent", "output": {"minimum": 0, "maximum": 100}},
+
+    {"input": "Pain scale must be between 0 and 10", "output": {"minimum": 0, "maximum": 10}},
+    {"input": "Pain score: 0-10", "output": {"minimum": 0, "maximum": 10}},
+    {"input": "Pain level from 0 to 10", "output": {"minimum": 0, "maximum": 10}},
+
+    {"input": "Glasgow Coma Scale: 3-15", "output": {"minimum": 3, "maximum": 15}},
+    {"input": "GCS score must be between 3 and 15", "output": {"minimum": 3, "maximum": 15}},
+    {"input": "GCS range: 3 to 15", "output": {"minimum": 3, "maximum": 15}},
+
+    {"input": "Weight must be positive", "output": {"exclusiveMinimum": 0}},
+    {"input": "Weight cannot be zero or negative", "output": {"exclusiveMinimum": 0}},
+    {"input": "Weight must be greater than 0", "output": {"exclusiveMinimum": 0}},
+
+    {"input": "Weight must be between 0.5 and 700 kg", "output": {"minimum": 0.5, "maximum": 700}},
+    {"input": "Patient weight: 0.5-700 kilograms", "output": {"minimum": 0.5, "maximum": 700}},
+
+    {"input": "Height must be between 20 and 300 cm", "output": {"minimum": 20, "maximum": 300}},
+    {"input": "Height range: 20-300 centimeters", "output": {"minimum": 20, "maximum": 300}},
+
+    {"input": "BMI must be between 10 and 100", "output": {"minimum": 10, "maximum": 100}},
+    {"input": "Body mass index: 10-100", "output": {"minimum": 10, "maximum": 100}},
+
+    {"input": "Glucose must be between 20 and 600 mg/dL", "output": {"minimum": 20, "maximum": 600}},
+    {"input": "Blood glucose range: 20-600", "output": {"minimum": 20, "maximum": 600}},
+    {"input": "Blood sugar: 20 to 600 mg/dL", "output": {"minimum": 20, "maximum": 600}},
+
+    {"input": "A1C must be between 4 and 20 percent", "output": {"minimum": 4, "maximum": 20}},
+    {"input": "HbA1c range: 4-20%", "output": {"minimum": 4, "maximum": 20}},
+    {"input": "Hemoglobin A1C: 4 to 20", "output": {"minimum": 4, "maximum": 20}},
+
+    {"input": "Creatinine must be between 0.1 and 30", "output": {"minimum": 0.1, "maximum": 30}},
+    {"input": "Creatinine range: 0.1-30 mg/dL", "output": {"minimum": 0.1, "maximum": 30}},
+
+    {"input": "eGFR must be between 0 and 150", "output": {"minimum": 0, "maximum": 150}},
+    {"input": "Estimated GFR: 0-150 mL/min", "output": {"minimum": 0, "maximum": 150}},
+
+    {"input": "Frequency: ONCE, DAILY, BID, TID, QID, Q4H, Q6H, Q8H, Q12H, PRN", "output": {"enum": ["ONCE", "DAILY", "BID", "TID", "QID", "Q4H", "Q6H", "Q8H", "Q12H", "PRN"]}},
+    {"input": "Medication frequency must be ONCE, DAILY, BID, TID, QID, Q4H, Q6H, Q8H, Q12H, or PRN", "output": {"enum": ["ONCE", "DAILY", "BID", "TID", "QID", "Q4H", "Q6H", "Q8H", "Q12H", "PRN"]}},
+
+    {"input": "Route: PO, IV, IM, SC, SL, PR, TOP, INH, OPH, OTC", "output": {"enum": ["PO", "IV", "IM", "SC", "SL", "PR", "TOP", "INH", "OPH", "OTC"]}},
+    {"input": "Administration route must be PO, IV, IM, SC, SL, PR, TOP, INH, OPH, or OTC", "output": {"enum": ["PO", "IV", "IM", "SC", "SL", "PR", "TOP", "INH", "OPH", "OTC"]}},
+
+    {"input": "Unit: mg, mcg, g, mL, L, units, tablets, capsules", "output": {"enum": ["mg", "mcg", "g", "mL", "L", "units", "tablets", "capsules"]}},
+    {"input": "Dose unit must be mg, mcg, g, mL, L, units, tablets, or capsules", "output": {"enum": ["mg", "mcg", "g", "mL", "L", "units", "tablets", "capsules"]}},
+
+    {"input": "Allergy severity: MILD, MODERATE, SEVERE, LIFE_THREATENING", "output": {"enum": ["MILD", "MODERATE", "SEVERE", "LIFE_THREATENING"]}},
+    {"input": "Severity must be MILD, MODERATE, SEVERE, or LIFE_THREATENING", "output": {"enum": ["MILD", "MODERATE", "SEVERE", "LIFE_THREATENING"]}},
+
+    {"input": "Reaction type: ALLERGY, INTOLERANCE, SIDE_EFFECT", "output": {"enum": ["ALLERGY", "INTOLERANCE", "SIDE_EFFECT"]}},
+    {"input": "Adverse reaction type: ALLERGY, INTOLERANCE, or SIDE_EFFECT", "output": {"enum": ["ALLERGY", "INTOLERANCE", "SIDE_EFFECT"]}},
+
+    {"input": "Order status: DRAFT, PENDING, ACTIVE, COMPLETED, CANCELLED, DISCONTINUED", "output": {"enum": ["DRAFT", "PENDING", "ACTIVE", "COMPLETED", "CANCELLED", "DISCONTINUED"]}},
+    {"input": "Status must be DRAFT, PENDING, ACTIVE, COMPLETED, CANCELLED, or DISCONTINUED", "output": {"enum": ["DRAFT", "PENDING", "ACTIVE", "COMPLETED", "CANCELLED", "DISCONTINUED"]}},
+
+    {"input": "Result status: PRELIMINARY, FINAL, CORRECTED, CANCELLED", "output": {"enum": ["PRELIMINARY", "FINAL", "CORRECTED", "CANCELLED"]}},
+    {"input": "Lab result status: PRELIMINARY, FINAL, CORRECTED, or CANCELLED", "output": {"enum": ["PRELIMINARY", "FINAL", "CORRECTED", "CANCELLED"]}},
+
+    {"input": "Specimen type: BLOOD, URINE, STOOL, SALIVA, CSF, TISSUE, SWAB", "output": {"enum": ["BLOOD", "URINE", "STOOL", "SALIVA", "CSF", "TISSUE", "SWAB"]}},
+
+    {"input": "Insurance type: COMMERCIAL, MEDICARE, MEDICAID, TRICARE, VA, SELF_PAY, OTHER", "output": {"enum": ["COMMERCIAL", "MEDICARE", "MEDICAID", "TRICARE", "VA", "SELF_PAY", "OTHER"]}},
+
+    {"input": "Consent status: GRANTED, DENIED, REVOKED, PENDING", "output": {"enum": ["GRANTED", "DENIED", "REVOKED", "PENDING"]}},
+    {"input": "Consent must be GRANTED, DENIED, REVOKED, or PENDING", "output": {"enum": ["GRANTED", "DENIED", "REVOKED", "PENDING"]}},
+
+    {"input": "Quantity must be positive integer", "output": {"minimum": 1}},
+    {"input": "Quantity must be at least 1", "output": {"minimum": 1}},
+    {"input": "Qty cannot be zero or negative", "output": {"minimum": 1}},
+
+    {"input": "Refills must be between 0 and 12", "output": {"minimum": 0, "maximum": 12}},
+    {"input": "Number of refills: 0-12", "output": {"minimum": 0, "maximum": 12}},
+    {"input": "Refill count: 0 to 12", "output": {"minimum": 0, "maximum": 12}},
+
+    {"input": "Days supply must be between 1 and 365", "output": {"minimum": 1, "maximum": 365}},
+    {"input": "Day supply: 1-365 days", "output": {"minimum": 1, "maximum": 365}},
+    {"input": "Supply days: 1 to 365", "output": {"minimum": 1, "maximum": 365}},
+
+    {"input": "Patient name maximum 200 characters", "output": {"maxLength": 200}},
+    {"input": "Name cannot exceed 200 characters", "output": {"maxLength": 200}},
+    {"input": "Patient name: max 200 chars", "output": {"maxLength": 200}},
+
+    {"input": "Name must be at least 1 character", "output": {"minLength": 1}},
+    {"input": "Name cannot be empty", "output": {"minLength": 1}},
+    {"input": "Name minimum 1 character", "output": {"minLength": 1}},
+
+    {"input": "Name must be between 1 and 100 characters", "output": {"minLength": 1, "maxLength": 100}},
+    {"input": "Name: 1-100 characters", "output": {"minLength": 1, "maxLength": 100}},
+
+    {"input": "Notes maximum 5000 characters", "output": {"maxLength": 5000}},
+    {"input": "Clinical notes: up to 5000 chars", "output": {"maxLength": 5000}},
+    {"input": "Notes cannot exceed 5000 characters", "output": {"maxLength": 5000}},
+
+    {"input": "Description must be at least 10 characters", "output": {"minLength": 10}},
+    {"input": "Description minimum 10 characters", "output": {"minLength": 10}},
+
+    {"input": "SSN format: XXX-XX-XXXX", "output": {"pattern": "^[0-9]{3}-[0-9]{2}-[0-9]{4}$"}},
+    {"input": "Social Security Number: 000-00-0000", "output": {"pattern": "^[0-9]{3}-[0-9]{2}-[0-9]{4}$"}},
+    {"input": "SSN must be in format 123-45-6789", "output": {"pattern": "^[0-9]{3}-[0-9]{2}-[0-9]{4}$"}},
+
+    {"input": "Phone number must be 10 digits", "output": {"pattern": "^[0-9]{10}$"}},
+    {"input": "Phone: 10 digit number", "output": {"pattern": "^[0-9]{10}$"}},
+    {"input": "Telephone: 10 numeric characters", "output": {"pattern": "^[0-9]{10}$"}},
+
+    {"input": "Phone format: (000) 000-0000", "output": {"pattern": "^\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}$"}},
+    {"input": "Phone must be in format (123) 456-7890", "output": {"pattern": "^\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}$"}},
+
+    {"input": "ZIP code must be 5 digits", "output": {"pattern": "^[0-9]{5}$"}},
+    {"input": "Postal code: 5 digit format", "output": {"pattern": "^[0-9]{5}$"}},
+    {"input": "US ZIP code (5 digits)", "output": {"pattern": "^[0-9]{5}$"}},
+
+    {"input": "State code must be 2 uppercase letters", "output": {"pattern": "^[A-Z]{2}$"}},
+    {"input": "State: 2 letter code", "output": {"pattern": "^[A-Z]{2}$"}},
+    {"input": "US state abbreviation (2 chars)", "output": {"pattern": "^[A-Z]{2}$"}},
+
+    {"input": "Email must be valid format", "output": {"format": "email"}},
+    {"input": "Must be a valid email address", "output": {"format": "email"}},
+    {"input": "Valid email required", "output": {"format": "email"}},
+
+    {"input": "Date must be in ISO format", "output": {"format": "date"}},
+    {"input": "Date format: YYYY-MM-DD", "output": {"format": "date"}},
+    {"input": "ISO 8601 date required", "output": {"format": "date"}},
+
+    {"input": "DateTime must be ISO 8601 format", "output": {"format": "date-time"}},
+    {"input": "Timestamp in ISO format", "output": {"format": "date-time"}},
+
+    {"input": "Admission date must be valid date", "output": {"format": "date"}},
+    {"input": "Discharge date in ISO format", "output": {"format": "date"}},
+    {"input": "DOB must be valid date", "output": {"format": "date"}},
+    {"input": "Date of birth: YYYY-MM-DD", "output": {"format": "date"}},
+
+    {"input": "Provider ID format: PRV followed by 8 digits", "output": {"pattern": "^PRV[0-9]{8}$"}},
+    {"input": "Provider ID must start with PRV and have 8 digits", "output": {"pattern": "^PRV[0-9]{8}$"}},
+
+    {"input": "Encounter ID format: ENC-YYYYMMDD-XXXXX", "output": {"pattern": "^ENC-[0-9]{8}-[A-Z0-9]{5}$"}},
+    {"input": "Visit ID: ENC- followed by date and 5 char code", "output": {"pattern": "^ENC-[0-9]{8}-[A-Z0-9]{5}$"}},
+
+    {"input": "Claim number must be alphanumeric", "output": {"pattern": "^[A-Za-z0-9]+$"}},
+    {"input": "Claim ID: letters and numbers only", "output": {"pattern": "^[A-Za-z0-9]+$"}},
+
+    {"input": "Authorization number: 10-20 alphanumeric characters", "output": {"pattern": "^[A-Za-z0-9]{10,20}$"}},
+    {"input": "Prior auth number: 10 to 20 alphanumeric", "output": {"pattern": "^[A-Za-z0-9]{10,20}$"}},
+
+    {"input": "Group number maximum 20 characters", "output": {"maxLength": 20}},
+    {"input": "Insurance group number: max 20 chars", "output": {"maxLength": 20}},
+
+    {"input": "Member ID maximum 30 characters", "output": {"maxLength": 30}},
+    {"input": "Insurance member ID: up to 30 characters", "output": {"maxLength": 30}},
+
+    {"input": "Yes/No indicator: Y, N", "output": {"enum": ["Y", "N"]}},
+    {"input": "Boolean flag: Y or N", "output": {"enum": ["Y", "N"]}},
+    {"input": "Yes/No: Y, N only", "output": {"enum": ["Y", "N"]}},
+
+    {"input": "True/False indicator", "output": {"enum": [true, false]}},
+    {"input": "Boolean value: true or false", "output": {"enum": [true, false]}},
+
+    {"input": "Active indicator: 0 or 1", "output": {"enum": [0, 1]}},
+    {"input": "Flag: 0 (inactive) or 1 (active)", "output": {"enum": [0, 1]}}
+  ]
+}
