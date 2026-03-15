@@ -11,6 +11,7 @@ from .schema_navigator import walk_schema
 from .dict_lookup import DataDictionary
 from .node_updater import update_node
 from .llm_interpreter import interpret_business_rule, LLMClient
+from .schema_validator import validate_schema_constraints, SchemaValidationError
 
 
 class SchemaEnricher:
@@ -25,7 +26,8 @@ class SchemaEnricher:
         self,
         schema: dict,
         dict_path: str,
-        llm_client: Optional[LLMClient] = None
+        llm_client: Optional[LLMClient] = None,
+        validate: bool = True
     ):
         """
         Initialize the enricher.
@@ -34,22 +36,38 @@ class SchemaEnricher:
             schema: JSON Schema dict to enrich
             dict_path: Path to data dictionary CSV
             llm_client: Optional LLM client for business rule interpretation
+            validate: Whether to validate the enriched schema (default True)
         """
         self.schema = schema
         self.dictionary = DataDictionary(dict_path)
         self.llm_client = llm_client
+        self.validate = validate
 
-    def enrich(self) -> dict:
+    def enrich(self, validate: Optional[bool] = None) -> dict:
         """
         Enrich the schema with constraints from the dictionary.
 
         Walks all schema properties and applies matching constraints.
 
+        Args:
+            validate: Override the instance validate setting for this call
+
         Returns:
             The enriched schema (modified in-place)
+
+        Raises:
+            SchemaValidationError: If validation is enabled and schema is invalid
         """
         for path, node in walk_schema(self.schema):
             self._enrich_node(path, node)
+
+        # Determine whether to validate
+        should_validate = validate if validate is not None else self.validate
+
+        if should_validate:
+            is_valid, errors = validate_schema_constraints(self.schema)
+            if not is_valid:
+                raise SchemaValidationError(errors)
 
         return self.schema
 
@@ -95,7 +113,8 @@ def enrich_schema(
     schema_path: str,
     dict_path: str,
     llm_client: Optional[LLMClient] = None,
-    output_path: Optional[str] = None
+    output_path: Optional[str] = None,
+    validate: bool = True
 ) -> dict:
     """
     Convenience function to enrich a schema from file paths.
@@ -105,14 +124,18 @@ def enrich_schema(
         dict_path: Path to data dictionary CSV
         llm_client: Optional LLM client for business rule interpretation
         output_path: Optional path to write enriched schema
+        validate: Whether to validate the enriched schema (default True)
 
     Returns:
         The enriched schema dict
+
+    Raises:
+        SchemaValidationError: If validation is enabled and schema is invalid
     """
     with open(schema_path, 'r', encoding='utf-8') as f:
         schema = json.load(f)
 
-    enricher = SchemaEnricher(schema, dict_path, llm_client)
+    enricher = SchemaEnricher(schema, dict_path, llm_client, validate=validate)
     result = enricher.enrich()
 
     if output_path:

@@ -100,7 +100,9 @@ age,NUMBER,3,N
             csv_path = f.name
 
         try:
-            enricher = SchemaEnricher(schema, csv_path)
+            # Disable validation - this test checks enrichment preserves existing values,
+            # not type-constraint compatibility (which is tested in test_schema_validator.py)
+            enricher = SchemaEnricher(schema, csv_path, validate=False)
             result = enricher.enrich()
 
             prop = result["properties"]["age"]
@@ -132,7 +134,9 @@ customer_age,NUMBER,3,N,Must be 18 or older
             mock_llm = Mock()
             mock_llm.complete.return_value = '{"minimum": 18}'
 
-            enricher = SchemaEnricher(schema, csv_path, llm_client=mock_llm)
+            # Disable validation - this test checks LLM integration,
+            # not type-constraint compatibility (which is tested in test_schema_validator.py)
+            enricher = SchemaEnricher(schema, csv_path, llm_client=mock_llm, validate=False)
             result = enricher.enrich()
 
             prop = result["properties"]["customer_age"]

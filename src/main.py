@@ -19,6 +19,7 @@ except ImportError:
 
 from .enricher import enrich_schema
 from .llm_interpreter import OpenRouterClient
+from .schema_validator import SchemaValidationError
 
 
 def create_llm_client(provider: str, model: str):
@@ -85,6 +86,11 @@ def main(argv: Optional[list] = None) -> int:
         action="store_true",
         help="Enable verbose output"
     )
+    parser.add_argument(
+        "--no-validate",
+        action="store_true",
+        help="Skip schema validation after enrichment"
+    )
 
     args = parser.parse_args(argv)
 
@@ -97,12 +103,15 @@ def main(argv: Optional[list] = None) -> int:
         if args.verbose:
             print(f"Loading schema: {args.schema}")
             print(f"Loading dictionary: {args.dict}")
+            if args.no_validate:
+                print("Schema validation: disabled")
 
         result = enrich_schema(
             schema_path=args.schema,
             dict_path=args.dict,
             llm_client=llm_client,
-            output_path=args.output
+            output_path=args.output,
+            validate=not args.no_validate
         )
 
         if args.output:
@@ -119,6 +128,11 @@ def main(argv: Optional[list] = None) -> int:
         return 1
     except json.JSONDecodeError as e:
         print(f"Error: Invalid JSON in schema - {e}", file=sys.stderr)
+        return 1
+    except SchemaValidationError as e:
+        print("Schema validation failed:", file=sys.stderr)
+        for error in e.errors:
+            print(f"  - {error}", file=sys.stderr)
         return 1
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

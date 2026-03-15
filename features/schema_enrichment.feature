@@ -136,3 +136,155 @@ Feature: JSON Schema Constraint Enrichment
     And a data dictionary with "status" having business_rule "Must be ACTIVE or INACTIVE"
     When I run the enrichment process with LLM interpretation
     Then the enriched schema should have enum ["ACTIVE", "INACTIVE"] on "status"
+
+  # ============================================================
+  # Schema Validation Scenarios - Meta-Schema Validation
+  # ============================================================
+
+  Scenario: Valid simple schema passes validation
+    Given a JSON Schema with properties "name" type string and "age" type integer
+    When I call validate_schema
+    Then validation should pass with no errors
+
+  Scenario: Valid schema with constraints passes validation
+    Given a JSON Schema with property "email" type string with format "email" and maxLength 255
+    And a property "count" type integer with minimum 0 and maximum 100
+    When I call validate_schema
+    Then validation should pass with no errors
+
+  Scenario: Detect invalid type value
+    Given a JSON Schema with type "invalid_type"
+    When I call validate_schema
+    Then validation should fail with errors
+
+  Scenario: Detect invalid constraint value type
+    Given a JSON Schema with type string and maxLength "not_a_number"
+    When I call validate_schema
+    Then validation should fail with errors
+
+  Scenario: Empty schema is valid
+    Given an empty JSON Schema
+    When I call validate_schema
+    Then validation should pass with no errors
+
+  # ============================================================
+  # Schema Validation Scenarios - Type-Constraint Compatibility
+  # ============================================================
+
+  Scenario: String constraints on string type pass
+    Given a JSON Schema node type string with minLength 1, maxLength 100, and pattern "^[a-z]+$"
+    When I call validate_node_constraints
+    Then validation should return no errors
+
+  Scenario: Number constraints on number type pass
+    Given a JSON Schema node type number with minimum 0, maximum 100, and multipleOf 0.5
+    When I call validate_node_constraints
+    Then validation should return no errors
+
+  Scenario: Integer constraints on integer type pass
+    Given a JSON Schema node type integer with minimum 0 and maximum 100
+    When I call validate_node_constraints
+    Then validation should return no errors
+
+  Scenario: Array constraints on array type pass
+    Given a JSON Schema node type array with minItems 1, maxItems 10, and uniqueItems true
+    When I call validate_node_constraints
+    Then validation should return no errors
+
+  Scenario: String constraint on number type fails
+    Given a JSON Schema node type number with maxLength 10
+    When I call validate_node_constraints
+    Then validation should return error mentioning "maxLength" and "number"
+
+  Scenario: Number constraint on string type fails
+    Given a JSON Schema node type string with minimum 0
+    When I call validate_node_constraints
+    Then validation should return error mentioning "minimum" and "string"
+
+  Scenario: Multiple incompatible constraints all reported
+    Given a JSON Schema node type string with minimum 0, maximum 100, and multipleOf 5
+    When I call validate_node_constraints
+    Then validation should return 3 errors
+
+  Scenario: Union type with compatible constraint passes
+    Given a JSON Schema node type ["string", "null"] with maxLength 100
+    When I call validate_node_constraints
+    Then validation should return no errors
+
+  Scenario: Union type with incompatible constraint fails
+    Given a JSON Schema node type ["integer", "null"] with maxLength 100
+    When I call validate_node_constraints
+    Then validation should return 1 error
+
+  Scenario: Node without type skips constraint validation
+    Given a JSON Schema node without type but with maxLength 100
+    When I call validate_node_constraints
+    Then validation should return no errors
+
+  Scenario: Error message includes field path
+    Given a JSON Schema node type string with minimum 0 at path "user.profile.age"
+    When I call validate_node_constraints
+    Then the error should include "user.profile.age"
+
+  # ============================================================
+  # Schema Validation Scenarios - Full Schema Validation
+  # ============================================================
+
+  Scenario: Valid nested schema passes all checks
+    Given a JSON Schema with nested "user.name" type string maxLength 100
+    And nested "user.age" type integer minimum 0
+    When I call validate_schema_constraints
+    Then validation should pass with no errors
+
+  Scenario: Invalid constraint in nested property caught
+    Given a JSON Schema with nested "user.name" type string with minimum 0
+    When I call validate_schema_constraints
+    Then validation should fail
+    And error should include "user.name"
+
+  Scenario: Validates array item schemas
+    Given a JSON Schema with array "tags" containing items type string with minimum 0
+    When I call validate_schema_constraints
+    Then validation should fail
+    And error should include "tags[]"
+
+  Scenario: Validates definitions
+    Given a JSON Schema with definition "Address" containing "zipcode" type string with minimum 0
+    When I call validate_schema_constraints
+    Then validation should fail
+    And error should include "definitions.Address"
+
+  # ============================================================
+  # Schema Validation Scenarios - Exception Handling
+  # ============================================================
+
+  Scenario: SchemaValidationError contains errors list
+    Given a SchemaValidationError with errors ["Error 1", "Error 2"]
+    Then the exception errors property should contain both errors
+    And the exception message should mention "2 error"
+
+  Scenario: SchemaValidationError message format
+    Given a SchemaValidationError with errors ["Single error"]
+    Then the exception message should mention "1 error"
+
+  # ============================================================
+  # Schema Validation Scenarios - Integration
+  # ============================================================
+
+  Scenario: CLI validates by default
+    Given an input schema file and data dictionary
+    When I run the CLI without --no-validate flag
+    Then validation should be performed
+    And validation errors should be printed to stderr
+
+  Scenario: CLI skips validation with --no-validate
+    Given an input schema file and data dictionary
+    When I run the CLI with --no-validate flag
+    Then validation should be skipped
+    And the enriched schema should be output even if it has constraint issues
+
+  Scenario: Enricher raises SchemaValidationError on invalid schema
+    Given a JSON Schema that will have incompatible constraints after enrichment
+    When I call enricher.enrich() with validation enabled
+    Then a SchemaValidationError should be raised
+    And the error should contain a list of validation errors
