@@ -288,3 +288,80 @@ Feature: JSON Schema Constraint Enrichment
     When I call enricher.enrich() with validation enabled
     Then a SchemaValidationError should be raised
     And the error should contain a list of validation errors
+
+  # ============================================================
+  # Model Evaluation Scenarios - DeepEval Integration
+  # ============================================================
+
+  Scenario: Create evaluation dataset from training data
+    Given training data with business rules and expected JSON constraints
+    When I create an evaluation dataset
+    Then the dataset should contain test cases with input and expected output
+
+  Scenario: Evaluate JSON correctness metric
+    Given a model output '{"minimum": 18}'
+    When I evaluate with JsonCorrectnessMetric
+    Then the metric should pass for valid JSON
+    And the metric should fail for invalid JSON like '{"minimum": }'
+
+  Scenario: Evaluate schema validity metric
+    Given a model output '{"minimum": 18}' for field type integer
+    When I evaluate with SchemaValidMetric
+    Then the metric should pass for valid schema constraints
+    And the metric should fail for '{"maxLength": 10}' on integer type
+
+  Scenario: Evaluate exact match metric
+    Given expected output '{"minimum": 18}'
+    And actual output '{"minimum": 18}'
+    When I evaluate with ExactMatchMetric
+    Then the metric should pass for identical outputs
+    And the metric should fail for '{"minimum": 19}'
+
+  Scenario: Evaluate semantic match metric
+    Given expected output '{"minimum": 0, "maximum": 100}'
+    And actual output '{"maximum": 100, "minimum": 0}'
+    When I evaluate with SemanticMatchMetric
+    Then the metric should pass for equivalent JSON with different key order
+
+  Scenario: Track latency metric
+    Given a model interpreter
+    When I run inference and measure latency
+    Then LatencyMetric should record the response time in milliseconds
+
+  Scenario: Run evaluation suite on model
+    Given an evaluation dataset with 10 test cases
+    When I run the evaluation suite
+    Then I should get aggregate scores for each metric
+    And I should get per-test-case results
+
+  Scenario: Compare T5 vs LLM performance
+    Given a T5 interpreter and an LLM interpreter
+    And an evaluation dataset
+    When I run comparison evaluation
+    Then I should get side-by-side metric scores
+    And I should get latency comparison
+
+  Scenario: Evaluate by constraint type
+    Given an evaluation dataset with various constraint types
+    When I run evaluation grouped by constraint type
+    Then I should get accuracy for minimum/maximum constraints
+    And I should get accuracy for pattern constraints
+    And I should get accuracy for enum constraints
+
+  Scenario: Evaluate by domain
+    Given evaluation datasets for financial and healthcare domains
+    When I run evaluation for each domain
+    Then I should get per-domain accuracy scores
+
+  Scenario: Generate evaluation report
+    Given completed evaluation results
+    When I generate an evaluation report
+    Then the report should include summary statistics
+    And the report should include failure analysis
+    And the report should be saved to a file
+
+  Scenario: CLI runs evaluation
+    Given a trained model adapter
+    When I run 'python -m src.evaluate --model t5 --domain financial'
+    Then evaluation should run on the domain dataset
+    And results should be printed to stdout
