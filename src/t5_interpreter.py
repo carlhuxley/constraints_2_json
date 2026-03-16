@@ -31,10 +31,32 @@ class T5Interpreter:
     to convert business rules to JSON Schema constraints.
     """
 
+    @staticmethod
+    def _detect_base_model(adapter_path: str) -> str:
+        """
+        Detect the base model from adapter_config.json.
+
+        Args:
+            adapter_path: Path to the adapter directory
+
+        Returns:
+            Base model name/path
+        """
+        config_path = os.path.join(adapter_path, "adapter_config.json")
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            base_model = config.get("base_model_name_or_path", "")
+            if base_model:
+                return base_model
+
+        # Default fallback
+        return "google/flan-t5-small"
+
     def __init__(
         self,
         adapter_path: str,
-        base_model: str = "google/flan-t5-small",
+        base_model: Optional[str] = None,
         device: Optional[str] = None,
     ):
         """
@@ -42,7 +64,7 @@ class T5Interpreter:
 
         Args:
             adapter_path: Path to the LoRA adapter directory
-            base_model: Base T5 model to use (default: flan-t5-small)
+            base_model: Base T5 model to use (auto-detected from adapter if not specified)
             device: Device to run inference on (default: auto-detect)
         """
         if not _check_transformers():
@@ -55,17 +77,26 @@ class T5Interpreter:
         from peft import PeftModel
 
         self.adapter_path = adapter_path
+
+        # Auto-detect base model from adapter config if not specified
+        if base_model is None:
+            base_model = self._detect_base_model(adapter_path)
         self.base_model_name = base_model
 
         # Auto-detect device
         if device is None:
             import torch
+            device = "cpu"  # Default to CPU
             if torch.cuda.is_available():
-                device = "cuda"
+                # Check if CUDA is actually usable (capability >= 7.0 for recent PyTorch)
+                try:
+                    capability = torch.cuda.get_device_capability()
+                    if capability[0] >= 7:
+                        device = "cuda"
+                except Exception:
+                    pass
             elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
                 device = "mps"
-            else:
-                device = "cpu"
         self.device = device
 
         # Load tokenizer from adapter (it may have custom config)
@@ -180,7 +211,7 @@ class T5Interpreter:
 def load_adapter(
     adapter_name: str,
     adapters_dir: str = "adapters",
-    base_model: str = "google/flan-t5-small",
+    base_model: Optional[str] = None,
 ) -> T5Interpreter:
     """
     Load a T5 interpreter with a named adapter.
@@ -188,7 +219,7 @@ def load_adapter(
     Args:
         adapter_name: Name of the adapter (e.g., "financial", "healthcare")
         adapters_dir: Directory containing adapter folders
-        base_model: Base T5 model to use
+        base_model: Base T5 model to use (auto-detected from adapter if not specified)
 
     Returns:
         Configured T5Interpreter instance
