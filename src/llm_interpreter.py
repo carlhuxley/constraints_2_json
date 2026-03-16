@@ -109,7 +109,7 @@ def interpret_business_rule(
 
 def _build_prompt(field_name: str, field_type: str, business_rule: str) -> str:
     """Build the prompt for the LLM."""
-    return f"""Convert this business rule to JSON Schema constraints.
+    return f"""Convert this business rule to JSON Schema Draft 7 constraints.
 
 Field: {field_name}
 Type: {field_type}
@@ -121,9 +121,12 @@ Return ONLY valid JSON with applicable constraints from this list:
 - pattern (regex for strings)
 - enum (array of allowed values)
 - format (standard formats like email, uri, date)
-- exclusiveMinimum, exclusiveMaximum (boolean flags)
+- exclusiveMinimum, exclusiveMaximum (numbers, e.g. "exclusiveMinimum": 0 means > 0)
 
-Example output: {{"minimum": 18, "maximum": 120}}
+Examples:
+- "Must be 18 or older" -> {{"minimum": 18}}
+- "Must be positive" -> {{"exclusiveMinimum": 0}}
+- "Between 0 and 100" -> {{"minimum": 0, "maximum": 100}}
 
 JSON response:"""
 
@@ -145,26 +148,64 @@ def _parse_response(response: str) -> dict:
 
     response = response.strip()
 
+    result = None
+
     # Try direct JSON parse first
     try:
-        return json.loads(response)
+        result = json.loads(response)
     except json.JSONDecodeError:
         pass
 
     # Try to extract JSON from text (handle "Here is the result: {...}")
-    json_match = re.search(r'\{[^{}]*\}', response)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
+    if result is None:
+        json_match = re.search(r'\{[^{}]*\}', response)
+        if json_match:
+            try:
+                result = json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
 
     # Try to find JSON with nested structures
-    json_match = re.search(r'\{.*\}', response, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
+    if result is None:
+        json_match = re.search(r'\{.*\}', response, re.DOTALL)
+        if json_match:
+            try:
+                result = json.loads(json_match.group())
+            except json.JSONDecodeError:
+                pass
 
-    return {}
+    if result is None:
+        return {}
+
+    # Fix Draft 4 style to Draft 7 style
+    return _fix_draft4_to_draft7(result)
+
+
+def _fix_draft4_to_draft7(constraints: dict) -> dict:
+    """
+    Convert JSON Schema Draft 4 style to Draft 7.
+
+    In Draft 4: minimum: 0, exclusiveMinimum: true (boolean)
+    In Draft 7: exclusiveMinimum: 0 (number)
+
+    Args:
+        constraints: Constraints dict that may use Draft 4 style
+
+    Returns:
+        Constraints dict using Draft 7 style
+    """
+    result = dict(constraints)
+
+    # Fix exclusiveMinimum
+    if result.get("exclusiveMinimum") is True and "minimum" in result:
+        result["exclusiveMinimum"] = result.pop("minimum")
+    elif result.get("exclusiveMinimum") is False:
+        del result["exclusiveMinimum"]
+
+    # Fix exclusiveMaximum
+    if result.get("exclusiveMaximum") is True and "maximum" in result:
+        result["exclusiveMaximum"] = result.pop("maximum")
+    elif result.get("exclusiveMaximum") is False:
+        del result["exclusiveMaximum"]
+
+    return result
