@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Loan Application",
+  "type": "object",
+  "properties": {
+    "application_id": {
+      "type": "string",
+      "description": "Unique loan application identifier"
+    },
+    "applicant": {
+      "type": "object",
+      "properties": {
+        "customer_id": {
+          "type": "string",
+          "description": "Customer identifier"
+        },
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "age": {
+          "type": "integer",
+          "description": "Applicant age"
+        },
+        "annual_income": {
+          "type": "number",
+          "description": "Annual income in dollars"
+        },
+        "credit_score": {
+          "type": "integer",
+          "description": "Credit score"
+        },
+        "employment_status": {
+          "type": "string",
+          "description": "Current employment status"
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number"
+        }
+      }
+    },
+    "loan_details": {
+      "type": "object",
+      "properties": {
+        "loan_amount": {
+          "type": "number",
+          "description": "Requested loan amount"
+        },
+        "loan_term_months": {
+          "type": "integer",
+          "description": "Loan term in months"
+        },
+        "interest_rate": {
+          "type": "number",
+          "description": "Annual interest rate"
+        },
+        "loan_type": {
+          "type": "string",
+          "description": "Type of loan"
+        },
+        "loan_purpose": {
+          "type": "string",
+          "description": "Purpose of the loan"
+        },
+        "down_payment": {
+          "type": "number",
+          "description": "Down payment amount"
+        },
+        "ltv_ratio": {
+          "type": "number",
+          "description": "Loan-to-value ratio"
+        }
+      }
+    },
+    "financial_info": {
+      "type": "object",
+      "properties": {
+        "debt_to_income_ratio": {
+          "type": "number",
+          "description": "Debt-to-income ratio"
+        },
+        "monthly_debt_payment": {
+          "type": "number",
+          "description": "Total monthly debt payments"
+        },
+        "account_balance": {
+          "type": "number",
+          "description": "Current account balance"
+        },
+        "savings_balance": {
+          "type": "number",
+          "description": "Savings account balance"
+        }
+      }
+    },
+    "application_status": {
+      "type": "string",
+      "description": "Current application status"
+    },
+    "risk_rating": {
+      "type": "string",
+      "description": "Risk assessment rating"
+    },
+    "submission_date": {
+      "type": "string",
+      "description": "Application submission date"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+Column Name,Data Type,Length,Nullable,Valid_Values,Business_Rule,Description
+encounter_id,VARCHAR,20,N,,,Unique encounter identifier
+mrn,VARCHAR,10,N,,MRN must be 10 digits,Medical record number
+first_name,VARCHAR,100,N,,Name must be between 1 and 100 characters,Patient first name
+last_name,VARCHAR,100,N,,Name must be between 1 and 100 characters,Patient last name
+date_of_birth,VARCHAR,10,N,,Date must be in ISO format,Patient date of birth
+age,NUMBER,3,N,,Patient age must be between 0 and 150,Patient age in years
+gender,VARCHAR,10,N,Male|Female|Other|Unknown,,Patient gender
+blood_type,VARCHAR,3,Y,A+|A-|B+|B-|O+|O-|AB+|AB-,,Blood type with Rh factor
+email,VARCHAR,100,Y,,Must be a valid email address,Contact email
+phone,VARCHAR,15,Y,,Phone must be 10 digits,Contact phone
+heart_rate,NUMBER,3,Y,,Heart rate must be between 30 and 250,Heart rate in beats per minute
+systolic_bp,NUMBER,3,Y,,Systolic BP must be between 50 and 300,Systolic blood pressure mmHg
+diastolic_bp,NUMBER,3,Y,,Diastolic BP must be between 30 and 200,Diastolic blood pressure mmHg
+temperature,NUMBER,5,Y,,Temperature must be between 90 and 110 degrees F,Body temperature Fahrenheit
+respiratory_rate,NUMBER,2,Y,,Respiratory rate must be between 5 and 60,Breaths per minute
+oxygen_saturation,NUMBER,3,Y,,Oxygen saturation must be between 0 and 100,SpO2 percentage
+pain_score,NUMBER,2,Y,,Pain score must be between 0 and 10,Pain level 0-10 scale
+weight,NUMBER,5,Y,,Weight must be positive,Patient weight in kg
+height,NUMBER,5,Y,,Height must be between 20 and 300 cm,Patient height in cm
+chief_complaint,VARCHAR,500,Y,,,Chief complaint text
+diagnosis_code,VARCHAR,10,Y,,ICD-10 code format,ICD-10 diagnosis code
+procedure_code,VARCHAR,5,Y,,CPT code must be 5 digits,CPT procedure code
+provider_npi,VARCHAR,10,Y,,NPI must be exactly 10 digits,National Provider Identifier
+gcs_score,NUMBER,2,Y,,Glasgow Coma Scale must be between 3 and 15,GCS score
+encounter_status,VARCHAR,20,N,PLANNED|ARRIVED|IN_PROGRESS|FINISHED|CANCELLED,,Encounter status
+priority,VARCHAR,10,N,ROUTINE|URGENT|EMERGENT|STAT,,Clinical priority level
+admission_date,VARCHAR,10,Y,,Date must be in ISO format,Admission date

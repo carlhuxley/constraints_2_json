@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Patient Encounter",
+  "type": "object",
+  "properties": {
+    "encounter_id": {
+      "type": "string",
+      "description": "Unique encounter identifier"
+    },
+    "patient": {
+      "type": "object",
+      "properties": {
+        "mrn": {
+          "type": "string",
+          "description": "Medical record number"
+        },
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "date_of_birth": {
+          "type": "string",
+          "description": "Patient date of birth"
+        },
+        "age": {
+          "type": "integer",
+          "description": "Patient age"
+        },
+        "gender": {
+          "type": "string",
+          "description": "Patient gender"
+        },
+        "blood_type": {
+          "type": "string",
+          "description": "Blood type"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        }
+      }
+    },
+    "vitals": {
+      "type": "object",
+      "properties": {
+        "heart_rate": {
+          "type": "integer",
+          "description": "Heart rate in bpm"
+        },
+        "systolic_bp": {
+          "type": "integer",
+          "description": "Systolic blood pressure"
+        },
+        "diastolic_bp": {
+          "type": "integer",
+          "description": "Diastolic blood pressure"
+        },
+        "temperature": {
+          "type": "number",
+          "description": "Body temperature"
+        },
+        "respiratory_rate": {
+          "type": "integer",
+          "description": "Respiratory rate"
+        },
+        "oxygen_saturation": {
+          "type": "integer",
+          "description": "Oxygen saturation percentage"
+        },
+        "pain_score": {
+          "type": "integer",
+          "description": "Pain level"
+        },
+        "weight": {
+          "type": "number",
+          "description": "Patient weight in kg"
+        },
+        "height": {
+          "type": "number",
+          "description": "Patient height in cm"
+        }
+      }
+    },
+    "clinical": {
+      "type": "object",
+      "properties": {
+        "chief_complaint": {
+          "type": "string",
+          "description": "Chief complaint"
+        },
+        "diagnosis_code": {
+          "type": "string",
+          "description": "ICD-10 diagnosis code"
+        },
+        "procedure_code": {
+          "type": "string",
+          "description": "CPT procedure code"
+        },
+        "provider_npi": {
+          "type": "string",
+          "description": "Provider NPI"
+        },
+        "gcs_score": {
+          "type": "integer",
+          "description": "Glasgow Coma Scale score"
+        }
+      }
+    },
+    "encounter_status": {
+      "type": "string",
+      "description": "Encounter status"
+    },
+    "priority": {
+      "type": "string",
+      "description": "Clinical priority"
+    },
+    "admission_date": {
+      "type": "string",
+      "description": "Admission date"
+    }
+  }
+}

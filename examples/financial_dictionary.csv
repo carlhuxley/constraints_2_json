@@ -1,0 +1,25 @@
+Column Name,Data Type,Length,Nullable,Valid_Values,Business_Rule,Description
+application_id,VARCHAR,20,N,,,Unique loan application identifier
+customer_id,VARCHAR,15,N,,Must be alphanumeric,Customer identifier
+first_name,VARCHAR,50,N,,Name must be between 1 and 50 characters,Applicant first name
+last_name,VARCHAR,50,N,,Name must be between 1 and 50 characters,Applicant last name
+age,NUMBER,3,N,,Must be at least 18 years old,Applicant age in years
+annual_income,NUMBER,12,N,,Income must be positive,Annual income in dollars
+credit_score,NUMBER,3,N,,Credit score must be between 300 and 850,FICO credit score
+employment_status,VARCHAR,20,N,EMPLOYED|SELF_EMPLOYED|UNEMPLOYED|RETIRED,,Current employment status
+email,VARCHAR,100,Y,,Must be a valid email address,Contact email address
+phone,VARCHAR,15,Y,,Phone must be 10 digits,Contact phone number
+loan_amount,NUMBER,12,N,,Loan amount must be between 1000 and 10000000,Requested loan amount in dollars
+loan_term_months,NUMBER,3,N,,Loan term must be 12 24 36 48 60 72 or 84 months,Loan term in months
+interest_rate,NUMBER,5,N,,Interest rate must be between 0 and 30 percent,Annual interest rate percentage
+loan_type,VARCHAR,20,N,MORTGAGE|AUTO|PERSONAL|BUSINESS|STUDENT,,Type of loan product
+loan_purpose,VARCHAR,50,Y,PURCHASE|REFINANCE|CASH_OUT|DEBT_CONSOLIDATION|HOME_IMPROVEMENT,,Purpose of the loan
+down_payment,NUMBER,12,Y,,Down payment cannot be negative,Down payment amount
+ltv_ratio,NUMBER,5,Y,,LTV ratio must be between 0 and 100,Loan-to-value ratio percentage
+debt_to_income_ratio,NUMBER,5,N,,DTI ratio must be between 0 and 100,Debt-to-income ratio percentage
+monthly_debt_payment,NUMBER,10,Y,,Payment amount must be positive,Total monthly debt payments
+account_balance,NUMBER,12,Y,,Balance cannot be negative,Current checking account balance
+savings_balance,NUMBER,12,Y,,Balance cannot be negative,Savings account balance
+application_status,VARCHAR,20,N,DRAFT|SUBMITTED|UNDER_REVIEW|APPROVED|DENIED|WITHDRAWN,,Current application status
+risk_rating,VARCHAR,10,Y,LOW|MEDIUM|HIGH|CRITICAL,,Risk assessment rating
+submission_date,VARCHAR,10,Y,,Date must be in ISO format,Application submission date
