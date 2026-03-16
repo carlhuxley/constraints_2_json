@@ -365,3 +365,184 @@ Feature: JSON Schema Constraint Enrichment
     When I run 'python -m src.evaluate --model t5 --domain financial'
     Then evaluation should run on the domain dataset
     And results should be printed to stdout
+
+  # ============================================================
+  # Data Dictionary Type-Constraint Scenarios
+  # ============================================================
+
+  Scenario: maxLength not applied to NUMBER data type
+    Given a data dictionary with "customer_id" having data_type NUMBER and Length 10
+    When I get constraints for "customer_id"
+    Then maxLength should NOT be in the constraints
+
+  Scenario: maxLength not applied to INTEGER data type
+    Given a data dictionary with "order_count" having data_type INTEGER and Length 5
+    When I get constraints for "order_count"
+    Then maxLength should NOT be in the constraints
+
+  Scenario: maxLength not applied to DECIMAL data type
+    Given a data dictionary with "price" having data_type DECIMAL and Length 10
+    When I get constraints for "price"
+    Then maxLength should NOT be in the constraints
+
+  Scenario: maxLength applied to VARCHAR data type
+    Given a data dictionary with "customer_name" having data_type VARCHAR and Length 100
+    When I get constraints for "customer_name"
+    Then maxLength should be 100
+
+  Scenario: maxLength applied to CHAR data type
+    Given a data dictionary with "state_code" having data_type CHAR and Length 2
+    When I get constraints for "state_code"
+    Then maxLength should be 2
+
+  Scenario: maxLength applied to STRING data type
+    Given a data dictionary with "notes" having data_type STRING and Length 500
+    When I get constraints for "notes"
+    Then maxLength should be 500
+
+  Scenario: maxLength applied to TEXT data type
+    Given a data dictionary with "description" having data_type TEXT and Length 2000
+    When I get constraints for "description"
+    Then maxLength should be 2000
+
+  # ============================================================
+  # T5 Interpreter Scenarios
+  # ============================================================
+
+  Scenario: T5 interprets minimum constraint
+    Given a trained T5 adapter for financial domain
+    When I interpret "Balance must be at least 1000"
+    Then I should get {"minimum": 1000}
+
+  Scenario: T5 interprets maximum constraint
+    Given a trained T5 adapter for financial domain
+    When I interpret "Age cannot exceed 65"
+    Then I should get {"maximum": 65}
+
+  Scenario: T5 interprets enum constraint
+    Given a trained T5 adapter for financial domain
+    When I interpret "Status must be ACTIVE or INACTIVE"
+    Then I should get {"enum": ["ACTIVE", "INACTIVE"]}
+
+  Scenario: T5 interprets range constraint
+    Given a trained T5 adapter for financial domain
+    When I interpret "Value must be between 0 and 100"
+    Then I should get {"minimum": 0, "maximum": 100}
+
+  Scenario: T5 interprets format constraint
+    Given a trained T5 adapter for financial domain
+    When I interpret "Email must be valid format"
+    Then I should get {"format": "email"}
+
+  Scenario: T5 interprets maxLength constraint
+    Given a trained T5 adapter for financial domain
+    When I interpret "Maximum 100 characters"
+    Then I should get {"maxLength": 100}
+
+  Scenario: T5 output parsed without braces
+    Given T5 model output '"minimum":18'
+    When I parse the output
+    Then I should get {"minimum": 18}
+
+  Scenario: T5 output parsed with braces
+    Given T5 model output '{"minimum":18}'
+    When I parse the output
+    Then I should get {"minimum": 18}
+
+  Scenario: Load T5 adapter by name
+    Given adapters directory with "adapter_financial/final_adapter"
+    When I call load_adapter("financial")
+    Then a T5Interpreter should be returned
+
+  # ============================================================
+  # Hybrid Interpreter Scenarios
+  # ============================================================
+
+  Scenario: Hybrid uses T5 when valid
+    Given a hybrid interpreter with T5 and LLM
+    When T5 returns valid constraints
+    Then T5 result should be used
+    And LLM should not be called
+
+  Scenario: Hybrid falls back to LLM on invalid T5 output
+    Given a hybrid interpreter with T5 and LLM
+    When T5 returns maxLength for integer field (invalid)
+    Then LLM should be called as fallback
+    And LLM result should be used
+
+  Scenario: Hybrid falls back to LLM on empty T5 output
+    Given a hybrid interpreter with T5 and LLM
+    When T5 returns empty result
+    Then LLM should be called as fallback
+
+  Scenario: Hybrid falls back to LLM on T5 exception
+    Given a hybrid interpreter with T5 and LLM
+    When T5 raises an exception
+    Then LLM should be called as fallback
+
+  Scenario: Hybrid uses LLM only when no T5
+    Given a hybrid interpreter with only LLM
+    When I interpret a business rule
+    Then LLM should be used directly
+
+  Scenario: Hybrid returns empty when both fail
+    Given a hybrid interpreter with T5 and LLM
+    When both T5 and LLM fail
+    Then empty dict should be returned
+
+  Scenario: Hybrid logs T5 failures
+    Given a hybrid interpreter with failure logging enabled
+    When T5 fails with validation errors
+    Then failure should be logged with timestamp and details
+    And failure log should be saved to file
+
+  Scenario: Hybrid tracks statistics
+    Given a hybrid interpreter
+    When I make multiple interpretation calls
+    Then stats should include total_calls
+    And stats should include t5_successes
+    And stats should include t5_failures
+    And stats should include llm_fallbacks
+    And stats should include t5_success_rate
+
+  # ============================================================
+  # Production Data Collection Scenarios
+  # ============================================================
+
+  Scenario: Collect T5 successful interpretations
+    Given a hybrid interpreter with training data collection enabled
+    When T5 successfully interprets a rule
+    Then the training example should be collected
+    And the example should have source "t5"
+
+  Scenario: Collect LLM successful interpretations
+    Given a hybrid interpreter with training data collection enabled
+    When LLM successfully interprets a rule
+    Then the training example should be collected
+    And the example should have source "llm"
+
+  Scenario: Training data includes input and output
+    Given collected training data
+    Then each example should have "input" (business rule)
+    And each example should have "output" (JSON constraints)
+    And each example should have "field_type"
+
+  Scenario: Do not collect when disabled
+    Given a hybrid interpreter with training data collection disabled
+    When I interpret business rules
+    Then no training data should be collected
+
+  Scenario: Save training data to file
+    Given a hybrid interpreter with training_log_path configured
+    When successful interpretations occur
+    Then training data should be saved to the file
+    And the file should include total_examples count
+    And the file should include source breakdown
+
+  Scenario: Export training data in dataset format
+    Given collected training data from production
+    When I call export_training_data with domain "production"
+    Then a JSON file should be created
+    And the file should have "domain" field
+    And the file should have "examples" array
+    And the format should match training data files

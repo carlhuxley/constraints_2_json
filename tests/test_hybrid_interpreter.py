@@ -275,6 +275,150 @@ class TestCreateHybridInterpreter:
         assert interpreter.t5 is None
 
 
+class TestProductionLogging:
+    """Test production training data collection."""
+
+    def test_collects_t5_successes(self):
+        """Should collect successful T5 interpretations."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {"minimum": 18}
+
+        interpreter = HybridInterpreter(
+            t5_interpreter=mock_t5,
+            llm_client=None,
+            collect_training_data=True,
+            log_failures=False,
+        )
+
+        interpreter.interpret("age", "integer", "Must be 18 or older")
+
+        training_data = interpreter.get_training_data()
+        assert len(training_data) == 1
+        assert training_data[0]["input"] == "Must be 18 or older"
+        assert training_data[0]["output"] == {"minimum": 18}
+        assert training_data[0]["field_type"] == "integer"
+
+    def test_collects_llm_successes(self):
+        """Should collect successful LLM interpretations."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_llm = Mock()
+
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret:
+            mock_interpret.return_value = {"enum": ["A", "B"]}
+
+            interpreter = HybridInterpreter(
+                t5_interpreter=None,
+                llm_client=mock_llm,
+                collect_training_data=True,
+                log_failures=False,
+            )
+
+            interpreter.interpret("status", "string", "Must be A or B")
+
+            training_data = interpreter.get_training_data()
+            assert len(training_data) == 1
+            assert training_data[0]["input"] == "Must be A or B"
+            assert training_data[0]["output"] == {"enum": ["A", "B"]}
+
+    def test_tracks_source_in_stats(self):
+        """Should track source (t5 vs llm) in stats."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {"minimum": 0}
+
+        interpreter = HybridInterpreter(
+            t5_interpreter=mock_t5,
+            llm_client=None,
+            collect_training_data=True,
+            log_failures=False,
+        )
+
+        interpreter.interpret("value", "number", "Must be positive")
+
+        assert len(interpreter.stats.training_log) == 1
+        assert interpreter.stats.training_log[0].source == "t5"
+
+    def test_does_not_collect_when_disabled(self):
+        """Should not collect data when collect_training_data=False."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {"minimum": 0}
+
+        interpreter = HybridInterpreter(
+            t5_interpreter=mock_t5,
+            llm_client=None,
+            collect_training_data=False,
+            log_failures=False,
+        )
+
+        interpreter.interpret("value", "number", "Must be positive")
+
+        assert len(interpreter.stats.training_log) == 0
+
+    def test_saves_training_data_to_file(self, tmp_path):
+        """Should save training data to JSON file."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        log_path = tmp_path / "training.json"
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {"maxLength": 100}
+
+        interpreter = HybridInterpreter(
+            t5_interpreter=mock_t5,
+            llm_client=None,
+            collect_training_data=True,
+            training_log_path=str(log_path),
+            log_failures=False,
+        )
+
+        interpreter.interpret("name", "string", "Max 100 characters")
+
+        assert log_path.exists()
+
+        with open(log_path) as f:
+            data = json.load(f)
+
+        assert data["total_examples"] == 1
+        assert data["sources"]["t5"] == 1
+        assert data["examples"][0]["input"] == "Max 100 characters"
+
+    def test_export_training_data(self, tmp_path):
+        """Should export training data in dataset format."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        export_path = tmp_path / "exported.json"
+
+        mock_t5 = Mock()
+        mock_t5.interpret.side_effect = [
+            {"minimum": 0},
+            {"maximum": 100},
+        ]
+
+        interpreter = HybridInterpreter(
+            t5_interpreter=mock_t5,
+            llm_client=None,
+            collect_training_data=True,
+            log_failures=False,
+        )
+
+        interpreter.interpret("min", "integer", "Must be positive")
+        interpreter.interpret("max", "integer", "Cannot exceed 100")
+
+        interpreter.export_training_data(str(export_path), domain="test")
+
+        with open(export_path) as f:
+            data = json.load(f)
+
+        assert data["domain"] == "test"
+        assert len(data["examples"]) == 2
+
+
 class TestValidConstraintTypes:
     """Test that validation correctly identifies valid/invalid constraints."""
 

@@ -30,6 +30,37 @@ class Interpreter(Protocol):
 
 
 @dataclass
+class TrainingRecord:
+    """Record of a successful interpretation for training data collection."""
+
+    timestamp: str
+    input: str  # business_rule
+    output: dict  # JSON constraints
+    field_name: str
+    field_type: str
+    source: str  # "t5" or "llm"
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "timestamp": self.timestamp,
+            "input": self.input,
+            "output": self.output,
+            "field_name": self.field_name,
+            "field_type": self.field_type,
+            "source": self.source,
+        }
+
+    def to_training_example(self) -> dict:
+        """Convert to training data format (input/output only)."""
+        return {
+            "input": self.input,
+            "output": self.output,
+            "field_type": self.field_type,
+        }
+
+
+@dataclass
 class FailureRecord:
     """Record of a T5 interpretation failure."""
 
@@ -66,6 +97,7 @@ class HybridStats:
     llm_fallbacks: int = 0
     llm_failures: int = 0
     failures: List[FailureRecord] = field(default_factory=list)
+    training_log: List[TrainingRecord] = field(default_factory=list)
 
     @property
     def t5_success_rate(self) -> float:
@@ -91,6 +123,7 @@ class HybridStats:
             "llm_failures": self.llm_failures,
             "t5_success_rate": f"{self.t5_success_rate:.1%}",
             "fallback_rate": f"{self.fallback_rate:.1%}",
+            "training_examples_collected": len(self.training_log),
         }
 
 
@@ -108,6 +141,8 @@ class HybridInterpreter:
         llm_client: Optional[object] = None,
         log_failures: bool = True,
         failure_log_path: Optional[str] = None,
+        collect_training_data: bool = False,
+        training_log_path: Optional[str] = None,
     ):
         """
         Initialize hybrid interpreter.
@@ -117,11 +152,15 @@ class HybridInterpreter:
             llm_client: LLM client for fallback (optional)
             log_failures: Whether to log T5 failures
             failure_log_path: Path to write failure log JSON
+            collect_training_data: Whether to log successful interpretations
+            training_log_path: Path to write training data JSON
         """
         self.t5 = t5_interpreter
         self.llm_client = llm_client
         self.log_failures = log_failures
         self.failure_log_path = failure_log_path or "t5_failures.json"
+        self.collect_training_data = collect_training_data
+        self.training_log_path = training_log_path or "training_data_collected.json"
         self.stats = HybridStats()
 
     def interpret(
@@ -150,6 +189,9 @@ class HybridInterpreter:
             t5_result = self._try_t5(field_name, field_type, business_rule)
             if t5_result is not None:
                 self.stats.t5_successes += 1
+                self._log_training_data(
+                    field_name, field_type, business_rule, t5_result, "t5"
+                )
                 return t5_result
 
             # T5 failed, try LLM fallback
@@ -160,6 +202,9 @@ class HybridInterpreter:
             llm_result = self._try_llm(field_name, field_type, business_rule)
             if llm_result:
                 self.stats.llm_fallbacks += 1
+                self._log_training_data(
+                    field_name, field_type, business_rule, llm_result, "llm"
+                )
                 return llm_result
             self.stats.llm_failures += 1
 
@@ -298,6 +343,82 @@ class HybridInterpreter:
         except Exception as e:
             logger.error(f"Failed to save failure log: {e}")
 
+    def _log_training_data(
+        self,
+        field_name: str,
+        field_type: str,
+        business_rule: str,
+        output: dict,
+        source: str,
+    ) -> None:
+        """Log a successful interpretation for training data collection."""
+        if not self.collect_training_data:
+            return
+
+        record = TrainingRecord(
+            timestamp=datetime.now().isoformat(),
+            input=business_rule,
+            output=output,
+            field_name=field_name,
+            field_type=field_type,
+            source=source,
+        )
+
+        self.stats.training_log.append(record)
+        logger.debug(
+            f"Training data logged: {business_rule} -> {output} (source: {source})"
+        )
+
+        self._save_training_data()
+
+    def _save_training_data(self) -> None:
+        """Save training data to JSON file."""
+        if not self.training_log_path:
+            return
+
+        try:
+            data = {
+                "collected_at": datetime.now().isoformat(),
+                "total_examples": len(self.stats.training_log),
+                "sources": {
+                    "t5": sum(1 for r in self.stats.training_log if r.source == "t5"),
+                    "llm": sum(1 for r in self.stats.training_log if r.source == "llm"),
+                },
+                "examples": [r.to_training_example() for r in self.stats.training_log],
+            }
+            with open(self.training_log_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to save training data: {e}")
+
+    def get_training_data(self) -> List[dict]:
+        """
+        Get collected training data in training format.
+
+        Returns:
+            List of {"input": str, "output": dict} training examples
+        """
+        return [r.to_training_example() for r in self.stats.training_log]
+
+    def export_training_data(self, path: str, domain: str = "production") -> None:
+        """
+        Export collected training data in dataset format.
+
+        Args:
+            path: Output file path
+            domain: Domain name for the dataset
+        """
+        data = {
+            "domain": domain,
+            "description": f"Training data collected from production ({len(self.stats.training_log)} examples)",
+            "collected_at": datetime.now().isoformat(),
+            "examples": [r.to_training_example() for r in self.stats.training_log],
+        }
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+
+        logger.info(f"Exported {len(self.stats.training_log)} training examples to {path}")
+
     def get_stats(self) -> dict:
         """Get current statistics."""
         return self.stats.to_dict()
@@ -313,6 +434,8 @@ def create_hybrid_interpreter(
     llm_client: Optional[object] = None,
     log_failures: bool = True,
     failure_log_path: Optional[str] = None,
+    collect_training_data: bool = False,
+    training_log_path: Optional[str] = None,
 ) -> HybridInterpreter:
     """
     Create a hybrid interpreter with optional T5 and LLM.
@@ -323,6 +446,8 @@ def create_hybrid_interpreter(
         llm_client: LLM client for fallback
         log_failures: Whether to log T5 failures
         failure_log_path: Path for failure log
+        collect_training_data: Whether to log successful interpretations
+        training_log_path: Path to write collected training data
 
     Returns:
         Configured HybridInterpreter
@@ -356,4 +481,6 @@ def create_hybrid_interpreter(
         llm_client=llm_client,
         log_failures=log_failures,
         failure_log_path=failure_log_path,
+        collect_training_data=collect_training_data,
+        training_log_path=training_log_path,
     )
