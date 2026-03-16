@@ -5,13 +5,14 @@ This module provides the main orchestration logic for enriching JSON Schemas
 with constraints from an Informatica data dictionary.
 """
 import json
-from typing import Optional
+from typing import Optional, Union
 
 from .schema_navigator import walk_schema
 from .dict_lookup import DataDictionary
 from .node_updater import update_node
 from .llm_interpreter import interpret_business_rule, LLMClient
 from .schema_validator import validate_schema_constraints, SchemaValidationError
+from .hybrid_interpreter import HybridInterpreter
 
 
 class SchemaEnricher:
@@ -27,6 +28,7 @@ class SchemaEnricher:
         schema: dict,
         dict_path: str,
         llm_client: Optional[LLMClient] = None,
+        hybrid_interpreter: Optional[HybridInterpreter] = None,
         validate: bool = True
     ):
         """
@@ -36,11 +38,13 @@ class SchemaEnricher:
             schema: JSON Schema dict to enrich
             dict_path: Path to data dictionary CSV
             llm_client: Optional LLM client for business rule interpretation
+            hybrid_interpreter: Optional hybrid interpreter (T5 + LLM fallback)
             validate: Whether to validate the enriched schema (default True)
         """
         self.schema = schema
         self.dictionary = DataDictionary(dict_path)
         self.llm_client = llm_client
+        self.hybrid_interpreter = hybrid_interpreter
         self.validate = validate
 
     def enrich(self, validate: Optional[bool] = None) -> dict:
@@ -85,22 +89,34 @@ class SchemaEnricher:
         if not constraints:
             return
 
-        # Handle business rule with LLM if available
+        # Handle business rule with interpreter if available
         business_rule = constraints.pop("x-business-rule", None)
         if business_rule:
             # Always add the business rule as extension
             constraints["x-business-rule"] = business_rule
 
-            # If LLM is available, interpret the rule
-            if self.llm_client:
-                field_type = node.get("type", "string")
+            field_name = path.split(".")[-1]
+            field_type = node.get("type", "string")
+
+            # Prefer hybrid interpreter (T5 + LLM fallback)
+            if self.hybrid_interpreter:
+                interpreted = self.hybrid_interpreter.interpret(
+                    field_name=field_name,
+                    field_type=field_type,
+                    business_rule=business_rule,
+                )
+                for key, value in interpreted.items():
+                    if key not in constraints:
+                        constraints[key] = value
+
+            # Fall back to LLM-only if no hybrid interpreter
+            elif self.llm_client:
                 llm_constraints = interpret_business_rule(
-                    field_name=path.split(".")[-1],
+                    field_name=field_name,
                     field_type=field_type,
                     business_rule=business_rule,
                     llm_client=self.llm_client
                 )
-                # Merge LLM constraints (they take precedence for new keys)
                 for key, value in llm_constraints.items():
                     if key not in constraints:
                         constraints[key] = value
@@ -113,6 +129,7 @@ def enrich_schema(
     schema_path: str,
     dict_path: str,
     llm_client: Optional[LLMClient] = None,
+    hybrid_interpreter: Optional[HybridInterpreter] = None,
     output_path: Optional[str] = None,
     validate: bool = True
 ) -> dict:
@@ -123,6 +140,7 @@ def enrich_schema(
         schema_path: Path to input JSON Schema file
         dict_path: Path to data dictionary CSV
         llm_client: Optional LLM client for business rule interpretation
+        hybrid_interpreter: Optional hybrid interpreter (T5 + LLM fallback)
         output_path: Optional path to write enriched schema
         validate: Whether to validate the enriched schema (default True)
 
@@ -135,7 +153,11 @@ def enrich_schema(
     with open(schema_path, 'r', encoding='utf-8') as f:
         schema = json.load(f)
 
-    enricher = SchemaEnricher(schema, dict_path, llm_client, validate=validate)
+    enricher = SchemaEnricher(
+        schema, dict_path, llm_client,
+        hybrid_interpreter=hybrid_interpreter,
+        validate=validate
+    )
     result = enricher.enrich()
 
     if output_path:
