@@ -7,6 +7,22 @@ data dictionary metadata and looking up field constraints.
 import csv
 from typing import Optional
 
+# Data types that should have maxLength applied
+STRING_DATA_TYPES = frozenset([
+    "varchar", "varchar2", "nvarchar", "nvarchar2",
+    "char", "nchar",
+    "string", "text", "ntext",
+    "clob", "nclob",
+])
+
+# Data types that are numeric (maxLength should NOT apply)
+NUMERIC_DATA_TYPES = frozenset([
+    "number", "numeric",
+    "integer", "int", "smallint", "bigint", "tinyint",
+    "decimal", "dec", "float", "real", "double",
+    "money", "smallmoney",
+])
+
 
 class DataDictionary:
     """
@@ -88,10 +104,15 @@ class DataDictionary:
 
         constraints = {}
 
-        # Parse length -> maxLength (for string types)
+        # Get the data type to determine which constraints apply
+        data_type = field_info.get("data_type", "").lower()
+
+        # Parse length -> maxLength (only for string types)
         length = field_info.get("length", "")
         if length and length.isdigit():
-            constraints["maxLength"] = int(length)
+            # Only apply maxLength to string data types
+            if data_type in STRING_DATA_TYPES:
+                constraints["maxLength"] = int(length)
 
         # Parse valid_values -> enum
         valid_values = field_info.get("valid_values", "")

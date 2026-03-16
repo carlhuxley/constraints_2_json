@@ -198,3 +198,120 @@ customer_age,NUMBER,3,N,Customer age in years
             assert constraints.get("description") == "Customer age in years"
         finally:
             os.unlink(csv_path)
+
+    def test_no_maxlength_for_number_type(self):
+        """Should NOT apply maxLength to NUMBER data types."""
+        csv_content = """Column Name,Data Type,Length,Nullable
+customer_id,NUMBER,10,N
+customer_age,NUMBER,3,N
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            csv_path = f.name
+
+        try:
+            dd = DataDictionary(csv_path)
+            # NUMBER fields should not have maxLength
+            constraints = dd.get_constraints("customer_id")
+            assert "maxLength" not in constraints
+
+            constraints = dd.get_constraints("customer_age")
+            assert "maxLength" not in constraints
+        finally:
+            os.unlink(csv_path)
+
+    def test_no_maxlength_for_integer_type(self):
+        """Should NOT apply maxLength to INTEGER data types."""
+        csv_content = """Column Name,Data Type,Length,Nullable
+order_count,INTEGER,5,Y
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            csv_path = f.name
+
+        try:
+            dd = DataDictionary(csv_path)
+            constraints = dd.get_constraints("order_count")
+            assert "maxLength" not in constraints
+        finally:
+            os.unlink(csv_path)
+
+    def test_no_maxlength_for_decimal_type(self):
+        """Should NOT apply maxLength to DECIMAL data types."""
+        csv_content = """Column Name,Data Type,Length,Nullable
+price,DECIMAL,10,N
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            csv_path = f.name
+
+        try:
+            dd = DataDictionary(csv_path)
+            constraints = dd.get_constraints("price")
+            assert "maxLength" not in constraints
+        finally:
+            os.unlink(csv_path)
+
+    def test_maxlength_applies_to_varchar(self):
+        """Should apply maxLength to VARCHAR data types."""
+        csv_content = """Column Name,Data Type,Length,Nullable
+customer_name,VARCHAR,100,Y
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            csv_path = f.name
+
+        try:
+            dd = DataDictionary(csv_path)
+            constraints = dd.get_constraints("customer_name")
+            assert constraints.get("maxLength") == 100
+        finally:
+            os.unlink(csv_path)
+
+    def test_maxlength_applies_to_char(self):
+        """Should apply maxLength to CHAR data types."""
+        csv_content = """Column Name,Data Type,Length,Nullable
+state_code,CHAR,2,Y
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            csv_path = f.name
+
+        try:
+            dd = DataDictionary(csv_path)
+            constraints = dd.get_constraints("state_code")
+            assert constraints.get("maxLength") == 2
+        finally:
+            os.unlink(csv_path)
+
+    def test_maxlength_applies_to_string_type(self):
+        """Should apply maxLength to STRING data types."""
+        csv_content = """Column Name,Data Type,Length,Nullable
+notes,STRING,500,Y
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            csv_path = f.name
+
+        try:
+            dd = DataDictionary(csv_path)
+            constraints = dd.get_constraints("notes")
+            assert constraints.get("maxLength") == 500
+        finally:
+            os.unlink(csv_path)
+
+    def test_maxlength_applies_to_text_type(self):
+        """Should apply maxLength to TEXT data types."""
+        csv_content = """Column Name,Data Type,Length,Nullable
+description,TEXT,2000,Y
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            csv_path = f.name
+
+        try:
+            dd = DataDictionary(csv_path)
+            constraints = dd.get_constraints("description")
+            assert constraints.get("maxLength") == 2000
+        finally:
+            os.unlink(csv_path)
