@@ -1,0 +1,24 @@
+{
+  "collected_at": "2026-03-16T21:34:38.171604",
+  "total_examples": 2,
+  "sources": {
+    "t5": 2,
+    "llm": 0
+  },
+  "examples": [
+    {
+      "input": "Must be positive",
+      "output": {
+        "minimum": 0
+      },
+      "field_type": "integer"
+    },
+    {
+      "input": "Cannot exceed 100",
+      "output": {
+        "maximum": 100
+      },
+      "field_type": "integer"
+    }
+  ]
+}

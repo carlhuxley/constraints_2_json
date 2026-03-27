@@ -1,0 +1,70 @@
+{
+  "stats": {
+    "total_calls": 3,
+    "t5_successes": 0,
+    "t5_failures": 3,
+    "llm_fallbacks": 2,
+    "llm_failures": 0,
+    "t5_success_rate": "0.0%",
+    "fallback_rate": "66.7%",
+    "training_examples_collected": 0
+  },
+  "failures": [
+    {
+      "timestamp": "2026-03-20T23:37:16.092480",
+      "field_name": "customer_id",
+      "field_type": "string",
+      "business_rule": "Must be alphanumeric",
+      "t5_output": {},
+      "validation_errors": [
+        "Empty output from T5"
+      ],
+      "fallback_output": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9]+$",
+        "minLength": 1
+      },
+      "fallback_source": "llm"
+    },
+    {
+      "timestamp": "2026-03-20T23:37:21.525954",
+      "field_name": "first_name",
+      "field_type": "string",
+      "business_rule": "Name must be between 1 and 50 characters",
+      "t5_output": {
+        "minimum": 1,
+        "maximum": 50
+      },
+      "validation_errors": [
+        "At 'first_name': Constraint 'minimum' is not valid for type 'string' (valid for: integer, number)",
+        "At 'first_name': Constraint 'maximum' is not valid for type 'string' (valid for: integer, number)"
+      ],
+      "fallback_output": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 50
+      },
+      "fallback_source": "llm"
+    },
+    {
+      "timestamp": "2026-03-20T23:37:23.627660",
+      "field_name": "last_name",
+      "field_type": "string",
+      "business_rule": "Name must be between 1 and 50 characters",
+      "t5_output": {
+        "minimum": 1,
+        "maximum": 50
+      },
+      "validation_errors": [
+        "At 'last_name': Constraint 'minimum' is not valid for type 'string' (valid for: integer, number)",
+        "At 'last_name': Constraint 'maximum' is not valid for type 'string' (valid for: integer, number)"
+      ],
+      "fallback_output": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 50
+      },
+      "fallback_source": "llm"
+    }
+  ]
+}

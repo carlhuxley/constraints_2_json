@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Loan Application",
+  "type": "object",
+  "properties": {
+    "application_id": {
+      "type": "string",
+      "description": "Unique loan application identifier\nUnique loan application identifier",
+      "maxLength": 20,
+      "x-required": true
+    },
+    "applicant": {
+      "type": "object",
+      "properties": {
+        "customer_id": {
+          "type": "string",
+          "description": "Customer identifier\nCustomer identifier",
+          "maxLength": 15,
+          "x-required": true,
+          "x-business-rule": "Must be alphanumeric",
+          "pattern": "^[a-zA-Z0-9]+$"
+        },
+        "first_name": {
+          "type": "string",
+          "maxLength": 50,
+          "x-required": true,
+          "description": "Applicant first name",
+          "x-business-rule": "Name must be between 1 and 50 characters",
+          "minLength": 1
+        },
+        "last_name": {
+          "type": "string",
+          "maxLength": 50,
+          "x-required": true,
+          "description": "Applicant last name",
+          "x-business-rule": "Name must be between 1 and 50 characters",
+          "minLength": 1
+        },
+        "age": {
+          "type": "integer",
+          "description": "Applicant age\nApplicant age in years",
+          "x-required": true,
+          "x-business-rule": "Must be at least 18 years old",
+          "minimum": 18
+        },
+        "annual_income": {
+          "type": "number",
+          "description": "Annual income in dollars\nAnnual income in dollars",
+          "x-required": true,
+          "x-business-rule": "Income must be positive",
+          "minimum": 100
+        },
+        "credit_score": {
+          "type": "integer",
+          "description": "Credit score\nFICO credit score",
+          "x-required": true,
+          "x-business-rule": "Credit score must be between 300 and 850",
+          "minimum": 300,
+          "maximum": 850
+        },
+        "employment_status": {
+          "type": "string",
+          "description": "Current employment status\nCurrent employment status",
+          "maxLength": 20,
+          "enum": [
+            "EMPLOYED",
+            "SELF_EMPLOYED",
+            "UNEMPLOYED",
+            "RETIRED"
+          ],
+          "x-required": true
+        },
+        "email": {
+          "type": "string",
+          "description": "Contact email\nContact email address",
+          "maxLength": 100,
+          "x-business-rule": "Must be a valid email address",
+          "email": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number\nContact phone number",
+          "maxLength": 15,
+          "x-business-rule": "Phone must be 10 digits",
+          "pattern": "[0-9]10$"
+        }
+      }
+    },
+    "loan_details": {
+      "type": "object",
+      "properties": {
+        "loan_amount": {
+          "type": "number",
+          "description": "Requested loan amount\nRequested loan amount in dollars",
+          "x-required": true,
+          "x-business-rule": "Loan amount must be between 1000 and 10000000",
+          "minimum": 1000,
+          "maximum": 10000000
+        },
+        "loan_term_months": {
+          "type": "integer",
+          "description": "Loan term in months\nLoan term in months",
+          "x-required": true,
+          "x-business-rule": "Loan term must be 12 24 36 48 60 72 or 84 months",
+          "minimum": 12,
+          "maximum": 48
+        },
+        "interest_rate": {
+          "type": "number",
+          "description": "Annual interest rate\nAnnual interest rate percentage",
+          "x-required": true,
+          "x-business-rule": "Interest rate must be between 0 and 30 percent",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "loan_type": {
+          "type": "string",
+          "description": "Type of loan\nType of loan product",
+          "maxLength": 20,
+          "enum": [
+            "MORTGAGE",
+            "AUTO",
+            "PERSONAL",
+            "BUSINESS",
+            "STUDENT"
+          ],
+          "x-required": true
+        },
+        "loan_purpose": {
+          "type": "string",
+          "description": "Purpose of the loan\nPurpose of the loan",
+          "maxLength": 50,
+          "enum": [
+            "PURCHASE",
+            "REFINANCE",
+            "CASH_OUT",
+            "DEBT_CONSOLIDATION",
+            "HOME_IMPROVEMENT"
+          ]
+        },
+        "down_payment": {
+          "type": "number",
+          "description": "Down payment amount\nDown payment amount",
+          "x-business-rule": "Down payment cannot be negative",
+          "minimum": 0
+        },
+        "ltv_ratio": {
+          "type": "number",
+          "description": "Loan-to-value ratio\nLoan-to-value ratio percentage",
+          "x-business-rule": "LTV ratio must be between 0 and 100",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "financial_info": {
+      "type": "object",
+      "properties": {
+        "debt_to_income_ratio": {
+          "type": "number",
+          "description": "Debt-to-income ratio\nDebt-to-income ratio percentage",
+          "x-required": true,
+          "x-business-rule": "DTI ratio must be between 0 and 100",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "monthly_debt_payment": {
+          "type": "number",
+          "description": "Total monthly debt payments\nTotal monthly debt payments",
+          "x-business-rule": "Payment amount must be positive",
+          "minimum": 100
+        },
+        "account_balance": {
+          "type": "number",
+          "description": "Current account balance\nCurrent checking account balance",
+          "x-business-rule": "Balance cannot be negative",
+          "minimum": 0
+        },
+        "savings_balance": {
+          "type": "number",
+          "description": "Savings account balance\nSavings account balance",
+          "x-business-rule": "Balance cannot be negative",
+          "minimum": 0
+        }
+      }
+    },
+    "application_status": {
+      "type": "string",
+      "description": "Current application status\nCurrent application status",
+      "maxLength": 20,
+      "enum": [
+        "DRAFT",
+        "SUBMITTED",
+        "UNDER_REVIEW",
+        "APPROVED",
+        "DENIED",
+        "WITHDRAWN"
+      ],
+      "x-required": true
+    },
+    "risk_rating": {
+      "type": "string",
+      "description": "Risk assessment rating\nRisk assessment rating",
+      "maxLength": 10,
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ]
+    },
+    "submission_date": {
+      "type": "string",
+      "description": "Application submission date\nApplication submission date",
+      "maxLength": 10,
+      "x-business-rule": "Date must be in ISO format",
+      "format": "date"
+    }
+  }
+}
