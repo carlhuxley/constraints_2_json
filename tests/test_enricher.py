@@ -209,3 +209,102 @@ name,VARCHAR,50,Y
         finally:
             os.unlink(schema_path)
             os.unlink(dict_path)
+
+
+class TestAuditLog:
+    """Test per-field audit log generation."""
+
+    def _make_enricher(self, schema, csv_content, **kwargs):
+        """Helper: write temp files and return a SchemaEnricher."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            f.write(csv_content)
+            csv_path = f.name
+        enricher = SchemaEnricher(schema, csv_path, **kwargs)
+        os.unlink(csv_path)
+        return enricher
+
+    def test_audit_entry_for_dictionary_match(self):
+        """Should record an entry for every field found in the dictionary."""
+        schema = {"type": "object", "properties": {"age": {"type": "integer"}}}
+        csv = "Column Name,Data Type,Length,Nullable\nage,INT,0,N\n"
+
+        enricher = self._make_enricher(schema, csv)
+        enricher.enrich(validate=False)
+
+        entries = enricher.get_audit_log()
+        assert len(entries) == 1
+        assert entries[0]["field_path"] == "age"
+        assert entries[0]["field_type"] == "integer"
+        assert entries[0]["interpreter_source"] == "no_rule"
+
+    def test_audit_entry_for_no_dictionary_match(self):
+        """Should record a no_match entry for fields absent from the dictionary."""
+        schema = {"type": "object", "properties": {"unknown_field": {"type": "string"}}}
+        csv = "Column Name,Data Type,Length,Nullable\nother,VARCHAR,10,Y\n"
+
+        enricher = self._make_enricher(schema, csv)
+        enricher.enrich(validate=False)
+
+        entries = enricher.get_audit_log()
+        assert len(entries) == 1
+        assert entries[0]["interpreter_source"] == "no_match"
+        assert entries[0]["constraints_applied"] == []
+
+    def test_audit_records_dictionary_keys(self):
+        """Should record which keys came from the dictionary."""
+        schema = {"type": "object", "properties": {"name": {"type": "string"}}}
+        csv = "Column Name,Data Type,Length,Nullable,Description\nname,VARCHAR,50,N,Full name\n"
+
+        enricher = self._make_enricher(schema, csv)
+        enricher.enrich(validate=False)
+
+        entry = enricher.get_audit_log()[0]
+        assert "maxLength" in entry["dictionary_keys"]
+        assert "x-required" in entry["dictionary_keys"]
+        assert "description" in entry["dictionary_keys"]
+
+    def test_audit_records_interpreter_source_and_keys(self):
+        """Should record T5/LLM source and which keys the interpreter contributed."""
+        schema = {"type": "object", "properties": {"age": {"type": "integer"}}}
+        csv = "Column Name,Data Type,Length,Nullable,Business Rule\nage,INT,0,N,Must be at least 18\n"
+
+        mock_hi = Mock()
+        mock_hi.interpret.return_value = {"minimum": 18}
+        mock_hi.last_source = "t5"
+
+        enricher = self._make_enricher(schema, csv, hybrid_interpreter=mock_hi)
+        enricher.enrich(validate=False)
+
+        entry = enricher.get_audit_log()[0]
+        assert entry["interpreter_source"] == "t5"
+        assert "minimum" in entry["interpreter_keys"]
+        assert entry["business_rule"] == "Must be at least 18"
+
+    def test_audit_log_written_to_file(self, tmp_path):
+        """Should write audit log JSON to the specified path."""
+        schema = {"type": "object", "properties": {"name": {"type": "string"}}}
+        csv_content = "Column Name,Data Type,Length,Nullable\nname,VARCHAR,100,Y\n"
+        audit_path = tmp_path / "audit.json"
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as sf:
+            json.dump(schema, sf)
+            schema_path = sf.name
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as df:
+            df.write(csv_content)
+            dict_path = df.name
+
+        try:
+            enrich_schema(schema_path, dict_path, audit_log_path=str(audit_path), validate=False)
+
+            assert audit_path.exists()
+            with open(audit_path) as f:
+                data = json.load(f)
+
+            assert data["schema"] == schema_path
+            assert data["dictionary"] == dict_path
+            assert isinstance(data["fields"], list)
+            assert data["fields"][0]["field_path"] == "name"
+        finally:
+            os.unlink(schema_path)
+            os.unlink(dict_path)

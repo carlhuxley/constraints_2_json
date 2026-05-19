@@ -102,6 +102,10 @@ def main(argv: Optional[list] = None) -> int:
         help="Named T5 adapter to use (looks in adapters/ directory)"
     )
     parser.add_argument(
+        "--audit-log",
+        help="Path to write per-field audit log JSON (records source of each constraint)"
+    )
+    parser.add_argument(
         "--collect-training-data",
         action="store_true",
         help="Collect successful interpretations for future training"
@@ -154,8 +158,12 @@ def main(argv: Optional[list] = None) -> int:
             llm_client=llm_client,
             hybrid_interpreter=hybrid_interpreter,
             output_path=args.output,
+            audit_log_path=args.audit_log,
             validate=not args.no_validate
         )
+
+        if args.audit_log and args.verbose:
+            print(f"Audit log written to: {args.audit_log}")
 
         if args.output:
             if args.verbose:
