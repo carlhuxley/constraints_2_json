@@ -15,7 +15,7 @@ import requests
 class LLMClient(Protocol):
     """Protocol defining the interface for LLM clients."""
 
-    def complete(self, prompt: str) -> str:
+    def complete(self, prompt: str, temperature: float = 0.0) -> str:
         """Send prompt to LLM and return response text."""
         ...
 
@@ -35,12 +35,13 @@ class OpenRouterClient:
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
 
-    def complete(self, prompt: str) -> str:
+    def complete(self, prompt: str, temperature: float = 0.0) -> str:
         """
         Send prompt to OpenRouter and return response text.
 
         Args:
             prompt: Prompt to send to the LLM
+            temperature: Sampling temperature (0.0 for stable structured output)
 
         Returns:
             Response text from the LLM
@@ -59,7 +60,7 @@ class OpenRouterClient:
         data = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.0,  # Stable output for structured data
+            "temperature": temperature,
         }
 
         try:
@@ -209,3 +210,47 @@ def _fix_draft4_to_draft7(constraints: dict) -> dict:
         del result["exclusiveMaximum"]
 
     return result
+
+
+def generate_rule_variations(
+    business_rule: str,
+    llm_client: LLMClient,
+    n: int = 3,
+) -> list:
+    """
+    Generate alternative phrasings of a business rule.
+
+    Args:
+        business_rule: The original business rule text
+        llm_client: LLM client to use
+        n: Number of variations to generate
+
+    Returns:
+        List of alternative input phrasings (strings only)
+    """
+    prompt = f"""Generate {n} alternative phrasings of this business rule that express exactly the same constraint.
+Return ONLY a JSON array of strings. Do not explain or add anything else.
+
+Rule: "{business_rule}"
+
+JSON array:"""
+
+    try:
+        response = llm_client.complete(prompt, temperature=0.7)
+        response = response.strip()
+
+        result = None
+        try:
+            result = json.loads(response)
+        except json.JSONDecodeError:
+            match = re.search(r'\[.*\]', response, re.DOTALL)
+            if match:
+                result = json.loads(match.group())
+
+        if isinstance(result, list):
+            return [v for v in result if isinstance(v, str)]
+
+    except Exception:
+        pass
+
+    return []

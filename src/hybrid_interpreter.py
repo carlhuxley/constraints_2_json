@@ -205,6 +205,8 @@ class HybridInterpreter:
                 self._log_training_data(
                     field_name, field_type, business_rule, llm_result, "llm"
                 )
+                if self.collect_training_data:
+                    self._log_llm_variations(field_name, field_type, business_rule, llm_result)
                 return llm_result
             self.stats.llm_failures += 1
 
@@ -342,6 +344,21 @@ class HybridInterpreter:
                 json.dump(data, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save failure log: {e}")
+
+    def _log_llm_variations(
+        self,
+        field_name: str,
+        field_type: str,
+        business_rule: str,
+        output: dict,
+    ) -> None:
+        """Generate and log input variations for a successful LLM result."""
+        from .llm_interpreter import generate_rule_variations
+
+        variations = generate_rule_variations(business_rule, self.llm_client)
+        for variation in variations:
+            if variation != business_rule:
+                self._log_training_data(field_name, field_type, variation, output, "llm")
 
     def _log_training_data(
         self,
