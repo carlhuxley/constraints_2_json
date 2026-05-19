@@ -55,6 +55,65 @@ python -m src.main \
 2. **LLM Fallback** (API, slower) - Handles complex/novel rules when T5 fails
 3. **Validation** - Ensures generated constraints are valid for field types
 
+### Sequence Diagram
+
+```
+CLI (src.main)       SchemaEnricher        DataDictionary       HybridInterpreter    SchemaValidator
+                     (enricher.py)         (dict_lookup.py)     (hybrid_interp.)     (schema_validator)
+      │                    │                     │                     │                    │
+      │── 1. Load schema ─►│                     │                     │                    │
+      │   JSON & create     │                     │                     │                    │
+      │   HybridInterpreter │                     │                     │                    │
+      │                    │                     │                     │                    │
+      │── 2. enrich() ────►│                     │                     │                    │
+      │                    │                     │                     │                    │
+      │          ┌─────────── LOOP: walk_schema() — for each (path, node) ─────────────┐   │
+      │          │         │                     │                     │                │   │
+      │          │         │── 3. get_constraints(path) ─────────────►│                │   │
+      │          │         │◄── constraint dict ──────────────────────│                │   │
+      │          │         │    (maxLength, enum, x-required,         │                │   │
+      │          │         │     description, x-business-rule)        │                │   │
+      │          │         │                     │                     │                │   │
+      │          │         │── 4. interpret() ───────────────────────►│                │   │
+      │          │         │   (field_name,       │                    │                │   │
+      │          │         │    field_type,        │                   │                │   │
+      │          │         │    business_rule)     │                   │                │   │
+      │          │         │                     │                     │                │   │
+      │          │         │                     │    [ ALT: T5 available (~50ms) ]     │   │
+      │          │         │                     │     t5.interpret(business_rule)      │   │
+      │          │         │                     │     → raw constraint dict            │   │
+      │          │         │                     │                     │                │   │
+      │          │         │                     │── 5. validate_node_constraints() ───────►│
+      │          │         │                     │◄── errors list ──────────────────────────│
+      │          │         │                     │                     │                │   │
+      │          │         │                     │  [ errors empty → return T5 result ] │   │
+      │          │         │                     │  [ errors present → log failure,     │   │
+      │          │         │                     │    fall through to LLM ]             │   │
+      │          │         │                     │                     │                │   │
+      │          │         │                     │    [ ALT: T5 unavailable or failed (~500ms) ]
+      │          │         │                     │     interpret_business_rule()        │   │
+      │          │         │                     │     (via OpenRouter LLM client)      │   │
+      │          │         │                     │     → constraint dict                │   │
+      │          │         │                     │                     │                │   │
+      │          │         │                     │    [ OPT: --collect-training-data ]  │   │
+      │          │         │                     │── 6. _log_training_data() ───────────│   │
+      │          │         │                     │   (append to training_data_collected.json)
+      │          │         │                     │                     │                │   │
+      │          │         │◄── 7. constraint dict ────────────────────│                │   │
+      │          │         │                     │                     │                │   │
+      │          │         │── 8. update_node(node, constraints)       │                │   │
+      │          │         │   (merge constraints into schema node)    │                │   │
+      │          └─────────── END LOOP ───────────────────────────────────────────────-─┘   │
+      │                    │                     │                     │                    │
+      │                    │── 9. validate_schema_constraints(schema) ──────────────────────►│
+      │                    │◄── (is_valid, errors) ──────────────────────────────────────────│
+      │                    │                     │                     │                    │
+      │◄── 10. enriched schema ──────────────────│                     │                    │
+      │                    │                     │                     │                    │
+      ▼                    ▼                     ▼                     ▼                    ▼
+[ Write enriched.json ]
+```
+
 ## Supported Constraints
 
 | Type | Example Rule | Generated Constraint |
