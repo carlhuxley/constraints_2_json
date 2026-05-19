@@ -546,6 +546,31 @@ class TestLLMVariations:
 
             mock_variations.assert_not_called()
 
+    def test_variations_generated_counter_incremented(self):
+        """Should increment variations_generated stat by number of unique variations."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {}
+
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret, \
+             patch('src.llm_interpreter.generate_rule_variations') as mock_variations:
+
+            mock_interpret.return_value = {"pattern": "^[a-zA-Z0-9]+$"}
+            mock_variations.return_value = ["Only letters and numbers", "Alphanumeric only"]
+
+            interpreter = HybridInterpreter(
+                t5_interpreter=mock_t5,
+                llm_client=Mock(),
+                collect_training_data=True,
+                log_failures=False,
+            )
+
+            interpreter.interpret("customer_id", "string", "Must be alphanumeric")
+
+            assert interpreter.stats.variations_generated == 2
+            assert interpreter.get_stats()["variations_generated"] == 2
+
 
 class TestValidConstraintTypes:
     """Test that validation correctly identifies valid/invalid constraints."""
