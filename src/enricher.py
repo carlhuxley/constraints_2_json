@@ -46,6 +46,7 @@ class SchemaEnricher:
         self.llm_client = llm_client
         self.hybrid_interpreter = hybrid_interpreter
         self.validate = validate
+        self._audit: list = []
 
     def enrich(self, validate: Optional[bool] = None) -> dict:
         """
@@ -75,6 +76,10 @@ class SchemaEnricher:
 
         return self.schema
 
+    def get_audit_log(self) -> list:
+        """Return the per-field audit log for this enrichment run."""
+        return self._audit
+
     def _enrich_node(self, path: str, node: dict) -> None:
         """
         Enrich a single schema node.
@@ -83,20 +88,33 @@ class SchemaEnricher:
             path: Field path (e.g., "user.address.zipcode")
             node: The schema node dict to enrich
         """
+        field_type = node.get("type", "unknown")
+
         # Get constraints from dictionary
         constraints = self.dictionary.get_constraints(path)
 
         if not constraints:
+            self._audit.append({
+                "field_path": path,
+                "field_type": field_type,
+                "business_rule": None,
+                "dictionary_keys": [],
+                "interpreter_source": "no_match",
+                "interpreter_keys": [],
+                "constraints_applied": [],
+            })
             return
+
+        dictionary_keys = list(constraints.keys())
 
         # Handle business rule with interpreter if available
         business_rule = constraints.pop("x-business-rule", None)
-        if business_rule:
-            # Always add the business rule as extension
-            constraints["x-business-rule"] = business_rule
+        interpreter_source = "no_rule"
+        interpreter_keys = []
 
+        if business_rule:
+            constraints["x-business-rule"] = business_rule
             field_name = path.split(".")[-1]
-            field_type = node.get("type", "string")
 
             # Prefer hybrid interpreter (T5 + LLM fallback)
             if self.hybrid_interpreter:
@@ -105,6 +123,8 @@ class SchemaEnricher:
                     field_type=field_type,
                     business_rule=business_rule,
                 )
+                interpreter_source = self.hybrid_interpreter.last_source or "none"
+                interpreter_keys = list(interpreted.keys())
                 for key, value in interpreted.items():
                     if key not in constraints:
                         constraints[key] = value
@@ -117,9 +137,21 @@ class SchemaEnricher:
                     business_rule=business_rule,
                     llm_client=self.llm_client
                 )
+                interpreter_source = "llm"
+                interpreter_keys = list(llm_constraints.keys())
                 for key, value in llm_constraints.items():
                     if key not in constraints:
                         constraints[key] = value
+
+        self._audit.append({
+            "field_path": path,
+            "field_type": field_type,
+            "business_rule": business_rule,
+            "dictionary_keys": dictionary_keys,
+            "interpreter_source": interpreter_source,
+            "interpreter_keys": interpreter_keys,
+            "constraints_applied": list(constraints.keys()),
+        })
 
         # Update the node with constraints
         update_node(node, constraints)
@@ -131,6 +163,7 @@ def enrich_schema(
     llm_client: Optional[LLMClient] = None,
     hybrid_interpreter: Optional[HybridInterpreter] = None,
     output_path: Optional[str] = None,
+    audit_log_path: Optional[str] = None,
     validate: bool = True
 ) -> dict:
     """
@@ -163,5 +196,14 @@ def enrich_schema(
     if output_path:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2)
+
+    if audit_log_path:
+        audit_data = {
+            "schema": schema_path,
+            "dictionary": dict_path,
+            "fields": enricher.get_audit_log(),
+        }
+        with open(audit_log_path, 'w', encoding='utf-8') as f:
+            json.dump(audit_data, f, indent=2)
 
     return result

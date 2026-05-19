@@ -160,6 +160,7 @@ class HybridInterpreter:
         self.t5 = t5_interpreter
         self.llm_client = llm_client
         self.log_failures = log_failures
+        self.last_source: Optional[str] = None
         self.failure_log_path = failure_log_path or "t5_failures.json"
         self.collect_training_data = collect_training_data
         self.training_log_path = training_log_path or "training_data_collected.json"
@@ -185,12 +186,14 @@ class HybridInterpreter:
             Dict of JSON Schema constraints
         """
         self.stats.total_calls += 1
+        self.last_source = None
 
         # Try T5 first if available
         if self.t5 is not None:
             t5_result = self._try_t5(field_name, field_type, business_rule)
             if t5_result is not None:
                 self.stats.t5_successes += 1
+                self.last_source = "t5"
                 self._log_training_data(
                     field_name, field_type, business_rule, t5_result, "t5"
                 )
@@ -204,6 +207,7 @@ class HybridInterpreter:
             llm_result = self._try_llm(field_name, field_type, business_rule)
             if llm_result:
                 self.stats.llm_fallbacks += 1
+                self.last_source = "llm"
                 self._log_training_data(
                     field_name, field_type, business_rule, llm_result, "llm"
                 )
@@ -213,6 +217,7 @@ class HybridInterpreter:
             self.stats.llm_failures += 1
 
         # Both failed
+        self.last_source = "none"
         logger.warning(
             f"Both T5 and LLM failed for: {business_rule}"
         )
