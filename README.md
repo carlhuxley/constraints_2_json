@@ -35,30 +35,23 @@ python -m src.main \
 
 ## How It Works
 
-```
-┌─────────────────┐     ┌─────────────────┐
-│  JSON Schema    │     │ Data Dictionary │
-│  (input.json)   │     │  (rules.csv)    │
-└────────┬────────┘     └────────┬────────┘
-         │                       │
-         └──────────┬────────────┘
-                    ▼
-         ┌─────────────────────┐
-         │   SchemaEnricher    │
-         │                     │
-         │  ┌───────────────┐  │
-         │  │    Hybrid     │  │
-         │  │  Interpreter  │  │
-         │  │ ┌────┐ ┌────┐ │  │
-         │  │ │ T5 │→│LLM │ │  │
-         │  │ │50ms│ │500ms│  │
-         │  │ └────┘ └────┘ │  │
-         │  └───────────────┘  │
-         └──────────┬──────────┘
-                    ▼
-         ┌─────────────────────┐
-         │   Enriched Schema   │
-         └─────────────────────┘
+```mermaid
+flowchart TD
+    A["JSON Schema\n(input.json)"] --> LookUp
+    B["Data Dictionary\n(rules.csv)"] --> LookUp
+
+    subgraph SE["SchemaEnricher"]
+        LookUp["walk_schema() & Get Rules"] --> T5
+
+        subgraph HI["Hybrid Interpreter"]
+            T5["T5 Model (~50ms)"] -->|on failure| LLM["LLM Fallback (~500ms)"]
+        end
+
+        T5 --> Merge["update_node()"]
+        LLM --> Merge
+    end
+
+    Merge --> C["Enriched Schema"]
 ```
 
 1. **T5 Model** (local, fast) - Fine-tuned model handles common patterns
@@ -67,61 +60,46 @@ python -m src.main \
 
 ### Sequence Diagram
 
-```
-CLI (src.main)       SchemaEnricher        DataDictionary       HybridInterpreter    SchemaValidator
-                     (enricher.py)         (dict_lookup.py)     (hybrid_interp.)     (schema_validator)
-      │                    │                     │                     │                    │
-      │── 1. Load schema ─►│                     │                     │                    │
-      │   JSON & create     │                     │                     │                    │
-      │   HybridInterpreter │                     │                     │                    │
-      │                    │                     │                     │                    │
-      │── 2. enrich() ────►│                     │                     │                    │
-      │                    │                     │                     │                    │
-      │          ┌─────────── LOOP: walk_schema() — for each (path, node) ─────────────┐   │
-      │          │         │                     │                     │                │   │
-      │          │         │── 3. get_constraints(path) ─────────────►│                │   │
-      │          │         │◄── constraint dict ──────────────────────│                │   │
-      │          │         │    (maxLength, enum, x-required,         │                │   │
-      │          │         │     description, x-business-rule)        │                │   │
-      │          │         │                     │                     │                │   │
-      │          │         │── 4. interpret() ───────────────────────►│                │   │
-      │          │         │   (field_name,       │                    │                │   │
-      │          │         │    field_type,        │                   │                │   │
-      │          │         │    business_rule)     │                   │                │   │
-      │          │         │                     │                     │                │   │
-      │          │         │                     │    [ ALT: T5 available (~50ms) ]     │   │
-      │          │         │                     │     t5.interpret(business_rule)      │   │
-      │          │         │                     │     → raw constraint dict            │   │
-      │          │         │                     │                     │                │   │
-      │          │         │                     │── 5. validate_node_constraints() ───────►│
-      │          │         │                     │◄── errors list ──────────────────────────│
-      │          │         │                     │                     │                │   │
-      │          │         │                     │  [ errors empty → return T5 result ] │   │
-      │          │         │                     │  [ errors present → log failure,     │   │
-      │          │         │                     │    fall through to LLM ]             │   │
-      │          │         │                     │                     │                │   │
-      │          │         │                     │    [ ALT: T5 unavailable or failed (~500ms) ]
-      │          │         │                     │     interpret_business_rule()        │   │
-      │          │         │                     │     (via OpenRouter LLM client)      │   │
-      │          │         │                     │     → constraint dict                │   │
-      │          │         │                     │                     │                │   │
-      │          │         │                     │    [ OPT: --collect-training-data ]  │   │
-      │          │         │                     │── 6. _log_training_data() ───────────│   │
-      │          │         │                     │   (append to training_data_collected.json)
-      │          │         │                     │                     │                │   │
-      │          │         │◄── 7. constraint dict ────────────────────│                │   │
-      │          │         │                     │                     │                │   │
-      │          │         │── 8. update_node(node, constraints)       │                │   │
-      │          │         │   (merge constraints into schema node)    │                │   │
-      │          └─────────── END LOOP ───────────────────────────────────────────────-─┘   │
-      │                    │                     │                     │                    │
-      │                    │── 9. validate_schema_constraints(schema) ──────────────────────►│
-      │                    │◄── (is_valid, errors) ──────────────────────────────────────────│
-      │                    │                     │                     │                    │
-      │◄── 10. enriched schema ──────────────────│                     │                    │
-      │                    │                     │                     │                    │
-      ▼                    ▼                     ▼                     ▼                    ▼
-[ Write enriched.json ]
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CLI as CLI (src.main)
+    participant SE as SchemaEnricher
+    participant DD as DataDictionary
+    participant HI as HybridInterpreter
+    participant SV as SchemaValidator
+    participant OR as OpenRouter API
+
+    CLI->>SE: load schema JSON + create HybridInterpreter
+    CLI->>SE: enrich()
+
+    loop walk_schema() — for each (path, node)
+        SE->>DD: get_constraints(path)
+        DD-->>SE: constraint dict (maxLength, enum, x-required, description, x-business-rule)
+        SE->>HI: interpret(field_name, field_type, business_rule)
+
+        alt T5 available (~50ms)
+            Note over HI: t5.interpret(business_rule)
+            HI->>SV: validate_node_constraints()
+            SV-->>HI: errors list
+            Note over HI: errors empty → return T5 result<br/>errors present → log failure, try LLM
+        else T5 unavailable or output invalid (~500ms)
+            HI->>OR: POST /v1/chat/completions (Deepseek-V3)
+            OR-->>HI: Return fallback schema patches
+        end
+
+        opt --collect-training-data
+            Note over HI: _log_training_data()<br/>→ training_data_collected.json
+        end
+
+        HI-->>SE: constraint dict
+        Note over SE: update_node(node, constraints)
+    end
+
+    SE->>SV: validate_schema_constraints(schema)
+    SV-->>SE: (is_valid, errors)
+    SE-->>CLI: enriched schema
+    Note over CLI: Write enriched.json
 ```
 
 ## Supported Constraints
