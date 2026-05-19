@@ -1,7 +1,7 @@
 """Tests for llm_interpreter module following TDD."""
 import pytest
 from unittest.mock import Mock, MagicMock
-from src.llm_interpreter import interpret_business_rule, LLMClient
+from src.llm_interpreter import interpret_business_rule, generate_rule_variations, LLMClient
 
 
 class TestInterpretMinimumRules:
@@ -233,3 +233,74 @@ class TestErrorHandling:
         )
 
         assert result.get("minimum") == 18
+
+
+class TestGenerateRuleVariations:
+    """Test LLM-generated input variation generation."""
+
+    def test_returns_list_of_strings(self):
+        """Should return a list of alternative phrasings."""
+        mock_client = Mock(spec=LLMClient)
+        mock_client.complete.return_value = '["Only letters and numbers allowed", "Alphanumeric characters only", "No special characters permitted"]'
+
+        result = generate_rule_variations("Must be alphanumeric", mock_client)
+
+        assert isinstance(result, list)
+        assert len(result) == 3
+        assert all(isinstance(v, str) for v in result)
+
+    def test_extracts_array_from_text(self):
+        """Should extract array even when LLM wraps it in prose."""
+        mock_client = Mock(spec=LLMClient)
+        mock_client.complete.return_value = 'Here are variations: ["Only letters and numbers", "Alphanumeric only"]'
+
+        result = generate_rule_variations("Must be alphanumeric", mock_client)
+
+        assert len(result) == 2
+
+    def test_filters_non_string_items(self):
+        """Should silently drop any non-string items from the array."""
+        mock_client = Mock(spec=LLMClient)
+        mock_client.complete.return_value = '["Valid variation", 42, null, "Another valid one"]'
+
+        result = generate_rule_variations("Must be alphanumeric", mock_client)
+
+        assert result == ["Valid variation", "Another valid one"]
+
+    def test_returns_empty_on_malformed_response(self):
+        """Should return empty list when LLM response cannot be parsed."""
+        mock_client = Mock(spec=LLMClient)
+        mock_client.complete.return_value = "not valid json at all"
+
+        result = generate_rule_variations("Must be alphanumeric", mock_client)
+
+        assert result == []
+
+    def test_returns_empty_on_empty_response(self):
+        """Should return empty list on empty response."""
+        mock_client = Mock(spec=LLMClient)
+        mock_client.complete.return_value = ""
+
+        result = generate_rule_variations("Must be alphanumeric", mock_client)
+
+        assert result == []
+
+    def test_calls_complete_with_high_temperature(self):
+        """Should use temperature=0.7 to get diverse variations."""
+        mock_client = Mock(spec=LLMClient)
+        mock_client.complete.return_value = '["Variation"]'
+
+        generate_rule_variations("Must be alphanumeric", mock_client)
+
+        _, kwargs = mock_client.complete.call_args
+        assert kwargs.get("temperature") == 0.7
+
+    def test_includes_original_rule_in_prompt(self):
+        """Should include the original business rule in the prompt."""
+        mock_client = Mock(spec=LLMClient)
+        mock_client.complete.return_value = '[]'
+
+        generate_rule_variations("Must be alphanumeric", mock_client)
+
+        prompt = mock_client.complete.call_args[0][0]
+        assert "Must be alphanumeric" in prompt

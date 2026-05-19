@@ -96,6 +96,7 @@ class HybridStats:
     t5_failures: int = 0
     llm_fallbacks: int = 0
     llm_failures: int = 0
+    variations_generated: int = 0
     failures: List[FailureRecord] = field(default_factory=list)
     training_log: List[TrainingRecord] = field(default_factory=list)
 
@@ -121,6 +122,7 @@ class HybridStats:
             "t5_failures": self.t5_failures,
             "llm_fallbacks": self.llm_fallbacks,
             "llm_failures": self.llm_failures,
+            "variations_generated": self.variations_generated,
             "t5_success_rate": f"{self.t5_success_rate:.1%}",
             "fallback_rate": f"{self.fallback_rate:.1%}",
             "training_examples_collected": len(self.training_log),
@@ -205,6 +207,8 @@ class HybridInterpreter:
                 self._log_training_data(
                     field_name, field_type, business_rule, llm_result, "llm"
                 )
+                if self.collect_training_data:
+                    self._log_llm_variations(field_name, field_type, business_rule, llm_result)
                 return llm_result
             self.stats.llm_failures += 1
 
@@ -342,6 +346,26 @@ class HybridInterpreter:
                 json.dump(data, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save failure log: {e}")
+
+    def _log_llm_variations(
+        self,
+        field_name: str,
+        field_type: str,
+        business_rule: str,
+        output: dict,
+    ) -> None:
+        """Generate and log input variations for a successful LLM result."""
+        from .llm_interpreter import generate_rule_variations
+
+        variations = generate_rule_variations(business_rule, self.llm_client)
+        count = 0
+        for variation in variations:
+            if variation != business_rule:
+                self._log_training_data(field_name, field_type, variation, output, "llm")
+                count += 1
+        if count:
+            self.stats.variations_generated += count
+            logger.info(f"Generated {count} input variations for: {business_rule}")
 
     def _log_training_data(
         self,

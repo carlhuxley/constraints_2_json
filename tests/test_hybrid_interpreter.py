@@ -419,6 +419,159 @@ class TestProductionLogging:
         assert len(data["examples"]) == 2
 
 
+class TestLLMVariations:
+    """Test LLM input variation logging on fallback."""
+
+    def test_variations_logged_alongside_original(self):
+        """Should log original rule plus each variation when LLM falls back."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {}  # T5 fails
+
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret, \
+             patch('src.llm_interpreter.generate_rule_variations') as mock_variations:
+
+            mock_interpret.return_value = {"pattern": "^[a-zA-Z0-9]+$"}
+            mock_variations.return_value = ["Only letters and numbers", "Alphanumeric only"]
+
+            interpreter = HybridInterpreter(
+                t5_interpreter=mock_t5,
+                llm_client=Mock(),
+                collect_training_data=True,
+                log_failures=False,
+            )
+
+            interpreter.interpret("customer_id", "string", "Must be alphanumeric")
+
+            training_data = interpreter.get_training_data()
+            inputs = [ex["input"] for ex in training_data]
+
+            assert "Must be alphanumeric" in inputs
+            assert "Only letters and numbers" in inputs
+            assert "Alphanumeric only" in inputs
+
+    def test_all_variations_share_same_output(self):
+        """Variations should be paired with the same validated output as the original."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {}
+
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret, \
+             patch('src.llm_interpreter.generate_rule_variations') as mock_variations:
+
+            mock_interpret.return_value = {"pattern": "^[a-zA-Z0-9]+$"}
+            mock_variations.return_value = ["Only letters and numbers", "Alphanumeric only"]
+
+            interpreter = HybridInterpreter(
+                t5_interpreter=mock_t5,
+                llm_client=Mock(),
+                collect_training_data=True,
+                log_failures=False,
+            )
+
+            interpreter.interpret("customer_id", "string", "Must be alphanumeric")
+
+            training_data = interpreter.get_training_data()
+            for ex in training_data:
+                assert ex["output"] == {"pattern": "^[a-zA-Z0-9]+$"}
+
+    def test_variations_not_generated_when_collection_disabled(self):
+        """Should not call generate_rule_variations when collect_training_data=False."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {}
+
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret, \
+             patch('src.llm_interpreter.generate_rule_variations') as mock_variations:
+
+            mock_interpret.return_value = {"pattern": "^[a-zA-Z0-9]+$"}
+
+            interpreter = HybridInterpreter(
+                t5_interpreter=mock_t5,
+                llm_client=Mock(),
+                collect_training_data=False,
+                log_failures=False,
+            )
+
+            interpreter.interpret("customer_id", "string", "Must be alphanumeric")
+
+            mock_variations.assert_not_called()
+
+    def test_original_logged_even_if_variations_empty(self):
+        """Should still log the original rule when variation generation returns nothing."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {}
+
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret, \
+             patch('src.llm_interpreter.generate_rule_variations') as mock_variations:
+
+            mock_interpret.return_value = {"pattern": "^[a-zA-Z0-9]+$"}
+            mock_variations.return_value = []
+
+            interpreter = HybridInterpreter(
+                t5_interpreter=mock_t5,
+                llm_client=Mock(),
+                collect_training_data=True,
+                log_failures=False,
+            )
+
+            interpreter.interpret("customer_id", "string", "Must be alphanumeric")
+
+            training_data = interpreter.get_training_data()
+            assert len(training_data) == 1
+            assert training_data[0]["input"] == "Must be alphanumeric"
+
+    def test_variations_not_generated_on_t5_success(self):
+        """Should not generate variations when T5 succeeds — no LLM call made."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {"minimum": 18}
+
+        with patch('src.llm_interpreter.generate_rule_variations') as mock_variations:
+
+            interpreter = HybridInterpreter(
+                t5_interpreter=mock_t5,
+                llm_client=Mock(),
+                collect_training_data=True,
+                log_failures=False,
+            )
+
+            interpreter.interpret("age", "integer", "Must be 18 or older")
+
+            mock_variations.assert_not_called()
+
+    def test_variations_generated_counter_incremented(self):
+        """Should increment variations_generated stat by number of unique variations."""
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {}
+
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret, \
+             patch('src.llm_interpreter.generate_rule_variations') as mock_variations:
+
+            mock_interpret.return_value = {"pattern": "^[a-zA-Z0-9]+$"}
+            mock_variations.return_value = ["Only letters and numbers", "Alphanumeric only"]
+
+            interpreter = HybridInterpreter(
+                t5_interpreter=mock_t5,
+                llm_client=Mock(),
+                collect_training_data=True,
+                log_failures=False,
+            )
+
+            interpreter.interpret("customer_id", "string", "Must be alphanumeric")
+
+            assert interpreter.stats.variations_generated == 2
+            assert interpreter.get_stats()["variations_generated"] == 2
+
+
 class TestValidConstraintTypes:
     """Test that validation correctly identifies valid/invalid constraints."""
 

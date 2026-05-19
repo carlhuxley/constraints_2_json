@@ -173,6 +173,7 @@ def main(argv: Optional[list] = None) -> int:
             print(f"  LLM fallbacks: {stats['llm_fallbacks']} ({stats['fallback_rate']})")
             if args.collect_training_data:
                 print(f"  Training examples collected: {stats['training_examples_collected']}")
+                print(f"  Input variations generated: {stats['variations_generated']}")
 
         return 0
 
