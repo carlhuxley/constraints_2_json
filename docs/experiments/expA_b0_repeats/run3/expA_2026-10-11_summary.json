@@ -1,0 +1,31 @@
+{
+  "experiment": "A",
+  "metadata": {
+    "date": "2026-10-11",
+    "git_sha": "ab15ac341d3c60f8c413eabfa4651828c892e251",
+    "git_dirty": false,
+    "dataset": "training_data/holdout_financial_test.json",
+    "dataset_sha256": "f6f32e5ab4301c0d2ec9828293664fc0a545f0084faf7980312f284caeb79e9d",
+    "llm_model": "deepseek/deepseek-chat",
+    "orig_adapter": "adapters/adapter_financial_v1_rebuild/final_adapter",
+    "retrained_adapter": "adapters/adapter_financial_v2/final_adapter",
+    "hybrid_adapter": "adapters/adapter_financial_v2/final_adapter"
+  },
+  "conditions": {
+    "B0": {
+      "total_tests": 102,
+      "json_correctness_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "exact_match_rate": 0.5686274509803921,
+      "semantic_match_rate": 0.9607843137254902,
+      "average_latency_ms": 2157.6633366765273,
+      "condition": "B0",
+      "median_latency_ms": 1754.9178721383214,
+      "p99_latency_ms": 9597.456838004291,
+      "llm_served_by": {
+        "deepseek/deepseek-chat via DeepInfra": 75,
+        "deepseek/deepseek-chat via StreamLake": 27
+      }
+    }
+  }
+}
