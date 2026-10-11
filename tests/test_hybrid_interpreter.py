@@ -5,6 +5,14 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 
 
+@pytest.fixture(autouse=True)
+def isolate_default_log_files(tmp_path, monkeypatch):
+    """HybridInterpreter writes training_data_collected.json / t5_failures.json to the
+    working directory by default; run each test in tmp_path so the tracked files in
+    the repo are never overwritten."""
+    monkeypatch.chdir(tmp_path)
+
+
 class TestHybridInterpreter:
     """Test hybrid interpreter behavior."""
 
