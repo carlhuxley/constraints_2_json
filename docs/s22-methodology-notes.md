@@ -190,19 +190,70 @@ present; diverse values used; multiple phrasings per pattern. A residual risk �
 — is the reason the held-out test set must be hand-authored rather than sampled from the training
 files.
 
-### 3.6 Results as evidence (template — fill after the runs)
+### 3.6 Results as evidence
 
-For each of B0, T5-orig, T5-retrained, Hybrid, report the metric table and then answer:
+All runs: held-out set `training_data/holdout_financial_test.json` (102 cases), 2026-10-11, LLM
+`deepseek/deepseek-chat` via OpenRouter, T5 on CPU (§5). Reports in `docs/experiments/`.
+Paired differences are tested with an exact McNemar test on the per-case results.
 
-- Did Hybrid meet **every** reject-H1 threshold in §3.3? → H1 supported / not supported.
-- Per-constraint breakdown: did the retrained adapter's semantic-match rate on the contrastive
-  `>=`/`<=` block improve over T5-orig? → EDA intervention validated / not validated.
-- Latency: median local-path latency vs B0 median → the "faster" half of H1.
-- Fallback rate and implied monthly cost at 10k rules/day → the business recommendation.
+| Condition | Semantic match | Exact match | Schema-valid | Median latency | p99 latency | Fallback |
+| --- | --- | --- | --- | --- | --- | --- |
+| B0 (mean of 3 runs; range) | **96.7%** (96.1–97.1) | 53.3% (48.0–56.9) | 100% | 1,542 ms (1,434–1,755) | 3.2–9.6 s | – |
+| T5-orig | 72.5% | 72.5% | 100% | 644 ms | 1.4 s | – |
+| T5-retrained | 77.5% | 77.5% | 100% | 698 ms | 1.8 s | – |
+| Hybrid, validity gate only | 77.5% | 77.5% | 100% | 719 ms | 2.0 s | 0% |
+| Hybrid, confidence gate 0.7 | **89.2%** | 75.5% | 100% | 805 ms | 8.3 s | 19.6% |
 
-State the conclusion as *supported*, *challenged*, or *partially supported* — e.g. "H1 supported
-on latency and cost; partially supported on reliability (Hybrid matched the LLM on semantic match
-but only after the deterministic validator; T5 alone was 11pp worse)".
+Semantic match is the corrected metric (§6 "Scoring change"); exact match is shown alongside it.
+T5 only ever produces the training data's output style, so for T5 the two are equal.
+
+**H1: not supported.** Hybrid fails two of the four reject-H1 conditions in §3.3:
+
+| Dimension | Threshold | Result (gated Hybrid) | Verdict |
+| --- | --- | --- | --- |
+| Correctness | ≤ 5pp below B0 | 7.5pp below the B0 mean (6.9–7.8pp across B0 runs); against B0 run 1, B0 is right on 9 cases Hybrid misses and Hybrid on 1 that B0 misses (p = 0.02) | **Fail** |
+| Safety | 100% schema-valid | 100% per field | Pass |
+| Latency | ≥ 5× faster on the local path | ≈2.1× (T5-only path 719 ms vs B0 medians, range 2.0–2.4×); this machine only (§6) | **Fail** |
+| Coverage | ≤ 40% fallback | 19.6% | Pass |
+
+The ungated Hybrid failed correctness by 19.3pp. The confidence gate (threshold fixed before
+this run, §4) fixed 12 cases and broke none (p < 0.001). Of the 20 cases it sent to the LLM, the
+LLM was right on 18; 6 of the 20 were already right from T5. Its gains were mostly malformed
+patterns and wrong formats (e.g. `^[0-9]{2}$` for "two uppercase letters then 7 digits",
+`format: "web"` for a URL), plus one operator error. It left 11 cases wrong: 9 were T5 answers
+confident enough to pass the gate — 5 of them with the bound **reversed**, e.g. "Smallest allowed
+investment is 1000" → `maximum`, "Balance must stay at or below 2500" → `minimum` — and 2 were
+arguable LLM answers (`\d*` for "digits only, any length"; an extra date pattern next to
+`format: date`). Routing on model confidence cannot catch errors the model is confident about.
+The gate also costs tail latency: a fallback runs T5 then the LLM in sequence, so p99 rises to 8.3 s.
+
+**Experiment B — EDA intervention: not validated.** Retraining on the 787-example rebalanced set
+raised semantic match from 72.5% to 77.5% (+5pp), but the per-case change is 10 cases fixed and
+5 broken (p = 0.30), so the gain is not distinguishable from noise at n = 102. On the
+contrastive `>=`/`<=` block the intervention targeted (22 cases) it went from 18 to 19 correct:
+
+| Contrastive group | n | T5-orig | T5-retrained |
+| --- | --- | --- | --- |
+| exclusiveMinimum | 4 | 50% | 75% |
+| maximum | 6 | 67% | 83% |
+| minimum | 10 | 100% | 90% |
+| range / length-range | 2 | 100% | 100% |
+| **All contrastive** | **22** | **81.8%** | **86.4%** |
+
+Outside the block, `pattern` improved (33% → 50%, n = 18) and `format` fell (60% → 20%, n = 5).
+The reversed-bound errors above are in the non-contrastive groups, so the rebalanced data did
+not remove direction confusion in general.
+
+**Cost.** At a 19.6% fallback rate the gated Hybrid sits in the "80% T5 + 20% LLM" band of the
+documented estimate — about \$10–40/month at 10k rules/day versus \$50–200/month for 100% LLM
+(`docs/next_steps.md:196-213`). These are the project's earlier estimates, not costs measured in
+these runs, and they exclude hosting the local model.
+
+**Business recommendation.** On this evidence, use the prompt-only LLM. The hybrid cuts API
+calls by about 80% and halves median latency, but it is 7.5pp less accurate, and its remaining
+errors are reversed bounds — silently wrong constraints, the worst kind for data validation. The
+hybrid becomes worth revisiting if a gate can catch confidently wrong answers (see §7: a
+rule-text consistency check) and the local path runs on faster hardware.
 
 ---
 
@@ -329,8 +380,9 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
   ≈2.1× speed-up (range 2.0–2.4× across the three B0 runs) therefore answers "is the local model
   fast enough *on this laptop's CPU*", not in general: a GPU or a server CPU could plausibly
   close some or all of the gap to the 5× threshold. This does **not** change the Experiment A
-  verdict — Hybrid also fails the correctness threshold by 19.3pp, and hardware does not affect
-  accuracy — but the report should state the latency result as specific to this machine.
+  verdict — Hybrid also fails the correctness threshold (by 19.3pp ungated, 7.5pp with the
+  confidence gate), and hardware does not affect accuracy — but the report should state the
+  latency result as specific to this machine.
 - **Scoring change made after the first results were seen (must be disclosed).** The
   pre-registered semantic-match metric compared dicts exactly (order aside), so in practice it
   always equalled exact match. On the first full Experiment A run (2026-10-11, commit `9c1eb51`)
@@ -352,17 +404,26 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
   unchanged. **Effect on the decision:** under the original definition Hybrid passes the
   correctness threshold (it is 29.5pp *above* B0); under the corrected one it fails it (19.6pp
   below). The overall verdict does not hinge on this change, because Hybrid also fails the
-  latency threshold (≈2.2× faster vs the 5× required) under either definition. Report both
-  metrics and this paragraph.
+  latency threshold (≈2.2× faster vs the 5× required) under either definition. The same holds
+  for the later confidence-gated Hybrid run: by exact match it scores 75.5% against the B0 mean
+  of 53.3% (pass); by semantic match, 89.2% against 96.7% (fail). Report both metrics and this
+  paragraph.
 - **Empty-output scoring (harness fix, no effect on reported numbers).** Interpreters return `{}`
   on failure, which was being scored as valid JSON and schema-valid; a failed-API run of B0 showed
   100% "valid" with 0% matches. Since `9c1eb51` an empty answer is only valid when no constraint was
   expected, and the runner aborts on the first failed LLM call instead of scoring it. No T5 run
   produced an empty answer, so Experiment B is unaffected.
-- **Hybrid fallback never fires on this test set.** The fallback is triggered by invalid T5 output,
-  but all of T5-retrained's wrong answers were well-formed and type-valid, so the fallback rate
-  was 0% and Hybrid behaved exactly like T5-retrained. A validity gate cannot catch confidently
-  wrong answers — a design limitation, not just a tuning issue.
+- **The original Hybrid fallback never fired, so a confidence gate was added after the first
+  results.** The validity gate only triggers on invalid T5 output, but all of T5-retrained's
+  wrong answers were well-formed and type-valid, so the fallback rate was 0% and Hybrid behaved
+  exactly like T5-retrained. Adding a confidence trigger (threshold 0.7) was a design change made
+  *after* seeing that result, so it must be disclosed as such. Safeguards: the threshold was chosen
+  on the adapter's own validation split, not the held-out set, and committed (`f7bbd32`) before
+  the gated run (`84bb216`); both runs are reported. Remaining weaknesses: the validation split had
+  only 5 T5 errors, so the threshold rests on little evidence, and a different threshold could do
+  better or worse on the held-out set — no sensitivity analysis was run, deliberately, as tuning it
+  on the held-out set would leak. The gate cannot catch confidently wrong answers: 9 of the 11
+  remaining errors passed it, 5 with the bound reversed (§3.6).
 
 ---
 
@@ -379,3 +440,7 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
 5. Run Experiments A and B; commit reports. Run B0 three times (§4 Experiment A) and score with
    the corrected semantic-match metric, disclosing the change (§6 "Scoring change").
 6. Write the methodology section against the §3 structure, with the real numbers in §3.6.
+7. (Follow-up, beyond S22 scope) Add a rule-text consistency gate for bound direction — e.g.
+   "at least" / "floor" / "smallest" must map to `minimum`, "at or below" / "ceiling" / "within"
+   to `maximum` / `maxLength` — and evaluate it on a fresh held-out set, since this one has now
+   informed two design changes.
