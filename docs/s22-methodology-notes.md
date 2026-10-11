@@ -273,11 +273,13 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
 
 | Item | Status |
 | --- | --- |
+| Hardware | HP ZBook Studio G5 (2019 mobile workstation): Intel Core i7-9850H, 6 cores / 12 threads @ 2.60 GHz; 32 GB RAM; NVIDIA Quadro P1000 (4 GB). Windows 11 Pro (build 26200) with virtualisation-based security on (Credential Guard, Hypervisor-enforced Code Integrity) |
+| Runtime environment | All training and experiments ran inside **WSL2** (Linux 6.6, `microsoft-standard-WSL2`), which sees 12 logical CPUs and ~15 GB of the 32 GB RAM |
 | `torch` / `transformers` / `peft` | Present in `.venv` (2.12.0 / 5.8.1 / 0.19.1). Newer than the versions the adapter was trained with (`peft 0.18.1`); loads fine |
 | `t5-base` weights | Cached in `~/.cache/huggingface/hub/models--t5-base` → T5 evaluation and retraining run **offline** |
-| GPU | **None.** `torch.cuda.is_available()` is `False`. Retraining uses `src/train_adapter_simple.py` (forces CPU); measured ~7.2 s/step at batch 8 → ~70 min for v1 (509 × 10 epochs) and ~110 min for v2 (787 × 10 epochs). Alternative: run `notebooks/finetune_t5_lora.ipynb` on free Colab GPU (~30 min) |
+| GPU | **Present but unused — all runs are CPU-only.** The Quadro P1000 is visible in WSL2 (`nvidia-smi`, driver 573.71, CUDA 12.8), but the installed `torch 2.12.0+cu130` needs a CUDA 13 driver, so `torch.cuda.is_available()` is `False` (every run logs "NVIDIA driver on your system is too old"). A newer driver may not be enough on its own: CUDA 13 is believed to drop Pascal (sm_61) GPUs such as the P1000, so GPU use would likely need a cu126 PyTorch build — untested. Retraining uses `src/train_adapter_simple.py` (forces CPU); measured ~7.2 s/step at batch 8 → ~70 min for v1 (509 × 10 epochs) and ~110 min for v2 (787 × 10 epochs). Alternative: run `notebooks/finetune_t5_lora.ipynb` on free Colab GPU (~30 min) |
 | LLM baseline (B0) | Needs `OPENROUTER_API_KEY` in `.env` and network access. ~60–100 calls at `temperature=0.0`; trivial cost |
-| Evaluation harness | `src/model_evaluator.py` is complete and tested. Only the `src/evaluate.py` CLI wiring for `--model t5/llm` is missing (stubs at lines 90-99) — either finish those or drive `EvaluationSuite` from a short script |
+| Evaluation harness | `src/model_evaluator.py` (metrics, `EvaluationSuite`) driven by `scripts/run_experiments.py`, which runs each condition on the held-out set and writes reports with git SHA, dirty flag, and dataset hash to `docs/experiments/`. It aborts on the first failed LLM call rather than scoring it. The `src/evaluate.py` CLI stubs for `--model t5/llm` (lines 90-99) were left unfinished — the runner replaced them |
 
 ---
 
@@ -304,6 +306,15 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
   report differences with that caveat and avoid over-claiming small gaps.
 - **`compare_models` runs sequentially**, so latency numbers are sensitive to machine load; run
   on an otherwise-idle machine and report median + p99, not just mean.
+- **Latency is hardware-specific (CPU only, virtualised).** Every T5 and Hybrid latency was
+  measured on the CPU of a 2019 mobile i7-9850H inside WSL2, under Windows virtualisation-based
+  security (§5); the laptop's Quadro P1000 went unused because of a PyTorch/driver CUDA mismatch.
+  B0 latency is network and provider time, and so does not depend on this machine. The measured
+  ≈2.1× speed-up (range 2.0–2.4× across the three B0 runs) therefore answers "is the local model
+  fast enough *on this laptop's CPU*", not in general: a GPU or a server CPU could plausibly
+  close some or all of the gap to the 5× threshold. This does **not** change the Experiment A
+  verdict — Hybrid also fails the correctness threshold by 19.3pp, and hardware does not affect
+  accuracy — but the report should state the latency result as specific to this machine.
 - **Scoring change made after the first results were seen (must be disclosed).** The
   pre-registered semantic-match metric compared dicts exactly (order aside), so in practice it
   always equalled exact match. On the first full Experiment A run (2026-10-11, commit `9c1eb51`)
