@@ -1,0 +1,1026 @@
+{
+  "date": "2026-10-11",
+  "dataset": "training_data/financial_domain_combined.json",
+  "adapter": "adapters/adapter_financial_v2/final_adapter",
+  "validation_examples": 79,
+  "semantic_match_rate": 0.9367088607594937,
+  "auroc": 0.9324324324324325,
+  "thresholds": [
+    {
+      "threshold": 0.5,
+      "fallback_rate": 0.0379746835443038,
+      "errors_caught": 3,
+      "errors_caught_rate": 0.6,
+      "correct_sent_to_llm": 0,
+      "accuracy_ceiling": 0.9746835443037974
+    },
+    {
+      "threshold": 0.6,
+      "fallback_rate": 0.0759493670886076,
+      "errors_caught": 3,
+      "errors_caught_rate": 0.6,
+      "correct_sent_to_llm": 3,
+      "accuracy_ceiling": 0.9746835443037974
+    },
+    {
+      "threshold": 0.7,
+      "fallback_rate": 0.10126582278481013,
+      "errors_caught": 4,
+      "errors_caught_rate": 0.8,
+      "correct_sent_to_llm": 4,
+      "accuracy_ceiling": 0.9873417721518988
+    },
+    {
+      "threshold": 0.8,
+      "fallback_rate": 0.12658227848101267,
+      "errors_caught": 4,
+      "errors_caught_rate": 0.8,
+      "correct_sent_to_llm": 6,
+      "accuracy_ceiling": 0.9873417721518988
+    },
+    {
+      "threshold": 0.9,
+      "fallback_rate": 0.20253164556962025,
+      "errors_caught": 4,
+      "errors_caught_rate": 0.8,
+      "correct_sent_to_llm": 12,
+      "accuracy_ceiling": 0.9873417721518988
+    },
+    {
+      "threshold": 0.95,
+      "fallback_rate": 0.25316455696202533,
+      "errors_caught": 4,
+      "errors_caught_rate": 0.8,
+      "correct_sent_to_llm": 16,
+      "accuracy_ceiling": 0.9873417721518988
+    },
+    {
+      "threshold": 0.99,
+      "fallback_rate": 0.4050632911392405,
+      "errors_caught": 5,
+      "errors_caught_rate": 1.0,
+      "correct_sent_to_llm": 27,
+      "accuracy_ceiling": 1.0
+    }
+  ],
+  "cases": [
+    {
+      "input": "Invoice number format: INV-XXXXX",
+      "expected": {
+        "pattern": "^INV-[A-Z0-9]{5}$"
+      },
+      "actual": {
+        "pattern": "^INV-[0-9]{4}$"
+      },
+      "correct": false,
+      "confidence": 0.19184626638889313
+    },
+    {
+      "input": "Card number: 15-16 digits",
+      "expected": {
+        "pattern": "^[0-9]{15,16}$"
+      },
+      "actual": {},
+      "correct": false,
+      "confidence": 0.35346677899360657
+    },
+    {
+      "input": "CVV/CVC: 3-4 numeric characters",
+      "expected": {
+        "pattern": "^[0-9]{3,4}$"
+      },
+      "actual": {
+        "pattern": "^V[0-9]{3}$"
+      },
+      "correct": false,
+      "confidence": 0.43993714451789856
+    },
+    {
+      "input": "Length: 1-100 characters",
+      "expected": {
+        "minLength": 1,
+        "maxLength": 100
+      },
+      "actual": {
+        "minLength": 1,
+        "maxLength": 100
+      },
+      "correct": true,
+      "confidence": 0.5308137536048889
+    },
+    {
+      "input": "Loan type: MORTGAGE, AUTO, PERSONAL, STUDENT",
+      "expected": {
+        "enum": [
+          "MORTGAGE",
+          "AUTO",
+          "PERSONAL",
+          "STUDENT"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "MORTGAGE",
+          "AUTO",
+          "PERSONAL",
+          "STUDENT"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.5320495367050171
+    },
+    {
+      "input": "URL format required",
+      "expected": {
+        "format": "uri"
+      },
+      "actual": {
+        "format": "uri"
+      },
+      "correct": true,
+      "confidence": 0.5469489693641663
+    },
+    {
+      "input": "Withdrawal limit: $10,000",
+      "expected": {
+        "maximum": 10000
+      },
+      "actual": {},
+      "correct": false,
+      "confidence": 0.6411665081977844
+    },
+    {
+      "input": "Maximum transfer amount is $25000",
+      "expected": {
+        "maximum": 25000
+      },
+      "actual": {
+        "maximum": 25000
+      },
+      "correct": true,
+      "confidence": 0.6930196285247803
+    },
+    {
+      "input": "Status: PENDING, PROCESSING, COMPLETED, FAILED, or REFUNDED",
+      "expected": {
+        "enum": [
+          "PENDING",
+          "PROCESSING",
+          "COMPLETED",
+          "FAILED",
+          "REFUNDED"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "PENDING",
+          "PROCESSING",
+          "COMPLETED",
+          "FAILED",
+          "REFUNDED"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.7707371115684509
+    },
+    {
+      "input": "Must be a valid UUID",
+      "expected": {
+        "format": "uuid"
+      },
+      "actual": {
+        "format": "uuid"
+      },
+      "correct": true,
+      "confidence": 0.7715530395507812
+    },
+    {
+      "input": "Account type must be CHECKING or SAVINGS",
+      "expected": {
+        "enum": [
+          "CHECKING",
+          "SAVINGS"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "CHECKING",
+          "SAVINGS"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.8171883225440979
+    },
+    {
+      "input": "greater than or equal to 1",
+      "expected": {
+        "minimum": 1
+      },
+      "actual": {
+        "minimum": 1
+      },
+      "correct": true,
+      "confidence": 0.8719685077667236
+    },
+    {
+      "input": "Status: PENDING, IN_REVIEW, APPROVED, or DENIED",
+      "expected": {
+        "enum": [
+          "PENDING",
+          "IN_REVIEW",
+          "APPROVED",
+          "DENIED"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "PENDING",
+          "IN_REVIEW",
+          "APPROVED",
+          "DENIED"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.8758493065834045
+    },
+    {
+      "input": "Transaction ID must start with TXN and have 12 digits",
+      "expected": {
+        "pattern": "^TXN[0-9]{12}$"
+      },
+      "actual": {
+        "pattern": "^TXN[0-9]{12}$"
+      },
+      "correct": true,
+      "confidence": 0.8855645060539246
+    },
+    {
+      "input": "Maximum loan amount is $100000",
+      "expected": {
+        "maximum": 100000
+      },
+      "actual": {
+        "maximum": 100000
+      },
+      "correct": true,
+      "confidence": 0.8871601819992065
+    },
+    {
+      "input": "Account type must be CHECKING, SAVINGS, MONEY_MARKET, or CD",
+      "expected": {
+        "enum": [
+          "CHECKING",
+          "SAVINGS",
+          "MONEY_MARKET",
+          "CD"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "CHECKING",
+          "SAVINGS",
+          "MONEY_MARKET",
+          "CD"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.8877750039100647
+    },
+    {
+      "input": "Deposit <= 10000",
+      "expected": {
+        "maximum": 10000
+      },
+      "actual": {
+        "maximum": 10000
+      },
+      "correct": true,
+      "confidence": 0.9113138914108276
+    },
+    {
+      "input": "Balance <= 100000",
+      "expected": {
+        "maximum": 100000
+      },
+      "actual": {
+        "maximum": 100000
+      },
+      "correct": true,
+      "confidence": 0.9168552756309509
+    },
+    {
+      "input": "Comments maximum 4000 characters",
+      "expected": {
+        "maxLength": 4000
+      },
+      "actual": {
+        "maxLength": 4000
+      },
+      "correct": true,
+      "confidence": 0.924644410610199
+    },
+    {
+      "input": "Transfer <= 10000",
+      "expected": {
+        "maximum": 10000
+      },
+      "actual": {
+        "maximum": 10000
+      },
+      "correct": true,
+      "confidence": 0.9281327724456787
+    },
+    {
+      "input": "Income >= 30000",
+      "expected": {
+        "minimum": 30000
+      },
+      "actual": {
+        "minimum": 30000
+      },
+      "correct": true,
+      "confidence": 0.9517616033554077
+    },
+    {
+      "input": "Year: 1900-2100",
+      "expected": {
+        "minimum": 1900,
+        "maximum": 2100
+      },
+      "actual": {
+        "minimum": 1900,
+        "maximum": 2100
+      },
+      "correct": true,
+      "confidence": 0.9527717232704163
+    },
+    {
+      "input": "5 digit ZIP code",
+      "expected": {
+        "pattern": "^[0-9]{5}$"
+      },
+      "actual": {
+        "pattern": "^[0-9]{5}$"
+      },
+      "correct": true,
+      "confidence": 0.9576012492179871
+    },
+    {
+      "input": "Loan cannot exceed $100,000",
+      "expected": {
+        "maximum": 100000
+      },
+      "actual": {
+        "maximum": 100000
+      },
+      "correct": true,
+      "confidence": 0.9790322780609131
+    },
+    {
+      "input": "Balance should not go below zero",
+      "expected": {
+        "minimum": 0
+      },
+      "actual": {
+        "minimum": 0
+      },
+      "correct": true,
+      "confidence": 0.9797018766403198
+    },
+    {
+      "input": "Rate >= 0",
+      "expected": {
+        "minimum": 0
+      },
+      "actual": {
+        "minimum": 0
+      },
+      "correct": true,
+      "confidence": 0.9805787205696106
+    },
+    {
+      "input": "APR cannot be negative and cannot exceed 36",
+      "expected": {
+        "minimum": 0,
+        "maximum": 36
+      },
+      "actual": {
+        "maximum": 36
+      },
+      "correct": false,
+      "confidence": 0.9810624718666077
+    },
+    {
+      "input": "Must be 10 or less",
+      "expected": {
+        "maximum": 10
+      },
+      "actual": {
+        "maximum": 10
+      },
+      "correct": true,
+      "confidence": 0.9823731184005737
+    },
+    {
+      "input": "Balance must be at most 100000",
+      "expected": {
+        "maximum": 100000
+      },
+      "actual": {
+        "maximum": 100000
+      },
+      "correct": true,
+      "confidence": 0.9833848476409912
+    },
+    {
+      "input": "DTI must be 43 or less",
+      "expected": {
+        "maximum": 43
+      },
+      "actual": {
+        "maximum": 43
+      },
+      "correct": true,
+      "confidence": 0.9849333167076111
+    },
+    {
+      "input": "Income <= 1000000",
+      "expected": {
+        "maximum": 1000000
+      },
+      "actual": {
+        "maximum": 1000000
+      },
+      "correct": true,
+      "confidence": 0.9857782125473022
+    },
+    {
+      "input": "Minimum of $50",
+      "expected": {
+        "minimum": 50
+      },
+      "actual": {
+        "minimum": 50
+      },
+      "correct": true,
+      "confidence": 0.989838719367981
+    },
+    {
+      "input": "Valid status values: ACTIVE, INACTIVE",
+      "expected": {
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "ACTIVE",
+          "INACTIVE"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.992840051651001
+    },
+    {
+      "input": "Age must be at most 65",
+      "expected": {
+        "maximum": 65
+      },
+      "actual": {
+        "maximum": 65
+      },
+      "correct": true,
+      "confidence": 0.99405437707901
+    },
+    {
+      "input": "Amount no less than 1",
+      "expected": {
+        "minimum": 1
+      },
+      "actual": {
+        "minimum": 1
+      },
+      "correct": true,
+      "confidence": 0.9947052597999573
+    },
+    {
+      "input": "Min 2 chars",
+      "expected": {
+        "minLength": 2
+      },
+      "actual": {
+        "minLength": 2
+      },
+      "correct": true,
+      "confidence": 0.9948078989982605
+    },
+    {
+      "input": "Age range: 21-65",
+      "expected": {
+        "minimum": 21,
+        "maximum": 65
+      },
+      "actual": {
+        "minimum": 21,
+        "maximum": 65
+      },
+      "correct": true,
+      "confidence": 0.9953000545501709
+    },
+    {
+      "input": "Transaction memo: up to 500 chars",
+      "expected": {
+        "maxLength": 500
+      },
+      "actual": {
+        "maxLength": 500
+      },
+      "correct": true,
+      "confidence": 0.9956568479537964
+    },
+    {
+      "input": "Cannot be less than 0",
+      "expected": {
+        "minimum": 0
+      },
+      "actual": {
+        "minimum": 0
+      },
+      "correct": true,
+      "confidence": 0.9957113265991211
+    },
+    {
+      "input": "At least 1 character required",
+      "expected": {
+        "minLength": 1
+      },
+      "actual": {
+        "minLength": 1
+      },
+      "correct": true,
+      "confidence": 0.9958816766738892
+    },
+    {
+      "input": "Has to be at least 1",
+      "expected": {
+        "minimum": 1
+      },
+      "actual": {
+        "minimum": 1
+      },
+      "correct": true,
+      "confidence": 0.9960176348686218
+    },
+    {
+      "input": "Cannot exceed 50 characters",
+      "expected": {
+        "maxLength": 50
+      },
+      "actual": {
+        "maxLength": 50
+      },
+      "correct": true,
+      "confidence": 0.9966225624084473
+    },
+    {
+      "input": "Phone number must be 10 digits",
+      "expected": {
+        "pattern": "^[0-9]{10}$"
+      },
+      "actual": {
+        "pattern": "^[0-9]{10}$"
+      },
+      "correct": true,
+      "confidence": 0.9968894124031067
+    },
+    {
+      "input": "Loan >= 5000",
+      "expected": {
+        "minimum": 5000
+      },
+      "actual": {
+        "minimum": 5000
+      },
+      "correct": true,
+      "confidence": 0.9969069361686707
+    },
+    {
+      "input": "Score no less than 300",
+      "expected": {
+        "minimum": 300
+      },
+      "actual": {
+        "minimum": 300
+      },
+      "correct": true,
+      "confidence": 0.9971376657485962
+    },
+    {
+      "input": "Should be 0 or more",
+      "expected": {
+        "minimum": 0
+      },
+      "actual": {
+        "minimum": 0
+      },
+      "correct": true,
+      "confidence": 0.9971394538879395
+    },
+    {
+      "input": "Payment frequency: WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, ANNUALLY",
+      "expected": {
+        "enum": [
+          "WEEKLY",
+          "BIWEEKLY",
+          "MONTHLY",
+          "QUARTERLY",
+          "ANNUALLY"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "WEEKLY",
+          "BIWEEKLY",
+          "MONTHLY",
+          "QUARTERLY",
+          "ANNUALLY"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.9972010850906372
+    },
+    {
+      "input": "x <= 10 means x is at most 10",
+      "expected": {
+        "maximum": 10
+      },
+      "actual": {
+        "maximum": 10
+      },
+      "correct": true,
+      "confidence": 0.9972031116485596
+    },
+    {
+      "input": "Payment frequency: MONTHLY, QUARTERLY, ANNUALLY",
+      "expected": {
+        "enum": [
+          "MONTHLY",
+          "QUARTERLY",
+          "ANNUALLY"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "MONTHLY",
+          "QUARTERLY",
+          "ANNUALLY"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.9973025321960449
+    },
+    {
+      "input": "Minimum deposit: 50",
+      "expected": {
+        "minimum": 50
+      },
+      "actual": {
+        "minimum": 50
+      },
+      "correct": true,
+      "confidence": 0.997343122959137
+    },
+    {
+      "input": "Payment terms: NET30, NET60, NET90",
+      "expected": {
+        "enum": [
+          "NET30",
+          "NET60",
+          "NET90"
+        ]
+      },
+      "actual": {
+        "enum": [
+          "NET30",
+          "NET60",
+          "NET90"
+        ]
+      },
+      "correct": true,
+      "confidence": 0.9975715279579163
+    },
+    {
+      "input": "Minimum age requirement is 21",
+      "expected": {
+        "minimum": 21
+      },
+      "actual": {
+        "minimum": 21
+      },
+      "correct": true,
+      "confidence": 0.9976261258125305
+    },
+    {
+      "input": "Must be zero or greater",
+      "expected": {
+        "minimum": 0
+      },
+      "actual": {
+        "minimum": 0
+      },
+      "correct": true,
+      "confidence": 0.9977443218231201
+    },
+    {
+      "input": "Age >= 65",
+      "expected": {
+        "minimum": 65
+      },
+      "actual": {
+        "minimum": 65
+      },
+      "correct": true,
+      "confidence": 0.9978229999542236
+    },
+    {
+      "input": "Discount percentage max 100",
+      "expected": {
+        "maximum": 100
+      },
+      "actual": {
+        "maximum": 100
+      },
+      "correct": true,
+      "confidence": 0.9979761242866516
+    },
+    {
+      "input": "Account number must be exactly 12 digits",
+      "expected": {
+        "pattern": "^[0-9]{12}$"
+      },
+      "actual": {
+        "pattern": "^[0-9]{12}$"
+      },
+      "correct": true,
+      "confidence": 0.9980632662773132
+    },
+    {
+      "input": "LTV <= 80",
+      "expected": {
+        "maximum": 80
+      },
+      "actual": {
+        "maximum": 80
+      },
+      "correct": true,
+      "confidence": 0.9980694651603699
+    },
+    {
+      "input": "Withdrawal must be at most 500",
+      "expected": {
+        "maximum": 500
+      },
+      "actual": {
+        "maximum": 500
+      },
+      "correct": true,
+      "confidence": 0.9981721639633179
+    },
+    {
+      "input": "Cannot be more than 100",
+      "expected": {
+        "maximum": 100
+      },
+      "actual": {
+        "maximum": 100
+      },
+      "correct": true,
+      "confidence": 0.9987565279006958
+    },
+    {
+      "input": "x >= 10 means x is at least 10",
+      "expected": {
+        "minimum": 10
+      },
+      "actual": {
+        "minimum": 10
+      },
+      "correct": true,
+      "confidence": 0.9988631010055542
+    },
+    {
+      "input": "Count >= 100",
+      "expected": {
+        "minimum": 100
+      },
+      "actual": {
+        "minimum": 100
+      },
+      "correct": true,
+      "confidence": 0.9989080429077148
+    },
+    {
+      "input": "Memo field maximum 500 characters",
+      "expected": {
+        "maxLength": 500
+      },
+      "actual": {
+        "maxLength": 500
+      },
+      "correct": true,
+      "confidence": 0.9990524649620056
+    },
+    {
+      "input": "Deposit must be at least 250",
+      "expected": {
+        "minimum": 250
+      },
+      "actual": {
+        "minimum": 250
+      },
+      "correct": true,
+      "confidence": 0.9990981817245483
+    },
+    {
+      "input": "Value >= 200",
+      "expected": {
+        "minimum": 200
+      },
+      "actual": {
+        "minimum": 200
+      },
+      "correct": true,
+      "confidence": 0.9991104006767273
+    },
+    {
+      "input": "Withdrawal <= 5000",
+      "expected": {
+        "maximum": 5000
+      },
+      "actual": {
+        "maximum": 5000
+      },
+      "correct": true,
+      "confidence": 0.9991254210472107
+    },
+    {
+      "input": "Discount must be between 0 and 50 percent",
+      "expected": {
+        "minimum": 0,
+        "maximum": 50
+      },
+      "actual": {
+        "minimum": 0,
+        "maximum": 50
+      },
+      "correct": true,
+      "confidence": 0.9991445541381836
+    },
+    {
+      "input": "Maximum discount is 100 percent",
+      "expected": {
+        "maximum": 100
+      },
+      "actual": {
+        "maximum": 100
+      },
+      "correct": true,
+      "confidence": 0.9992154836654663
+    },
+    {
+      "input": "Maximum withdrawal is $500",
+      "expected": {
+        "maximum": 500
+      },
+      "actual": {
+        "maximum": 500
+      },
+      "correct": true,
+      "confidence": 0.9992221593856812
+    },
+    {
+      "input": "Percent must be 0 to 100 inclusive",
+      "expected": {
+        "minimum": 0,
+        "maximum": 100
+      },
+      "actual": {
+        "minimum": 0,
+        "maximum": 100
+      },
+      "correct": true,
+      "confidence": 0.9993709921836853
+    },
+    {
+      "input": "Maximum of $100",
+      "expected": {
+        "maximum": 100
+      },
+      "actual": {
+        "maximum": 100
+      },
+      "correct": true,
+      "confidence": 0.9993775486946106
+    },
+    {
+      "input": "Deposit >= 100",
+      "expected": {
+        "minimum": 100
+      },
+      "actual": {
+        "minimum": 100
+      },
+      "correct": true,
+      "confidence": 0.9994383454322815
+    },
+    {
+      "input": "Applicant must be at least 18",
+      "expected": {
+        "minimum": 18
+      },
+      "actual": {
+        "minimum": 18
+      },
+      "correct": true,
+      "confidence": 0.9994816184043884
+    },
+    {
+      "input": "Cannot exceed 1000",
+      "expected": {
+        "maximum": 1000
+      },
+      "actual": {
+        "maximum": 1000
+      },
+      "correct": true,
+      "confidence": 0.9995243549346924
+    },
+    {
+      "input": "Cannot exceed 100 characters",
+      "expected": {
+        "maxLength": 100
+      },
+      "actual": {
+        "maxLength": 100
+      },
+      "correct": true,
+      "confidence": 0.9996021389961243
+    },
+    {
+      "input": "Age >= 18",
+      "expected": {
+        "minimum": 18
+      },
+      "actual": {
+        "minimum": 18
+      },
+      "correct": true,
+      "confidence": 0.9996305704116821
+    },
+    {
+      "input": "Minimum age is 18",
+      "expected": {
+        "minimum": 18
+      },
+      "actual": {
+        "minimum": 18
+      },
+      "correct": true,
+      "confidence": 0.999659538269043
+    },
+    {
+      "input": "Holder name: max 100 chars",
+      "expected": {
+        "maxLength": 100
+      },
+      "actual": {
+        "maxLength": 100
+      },
+      "correct": true,
+      "confidence": 0.9996610879898071
+    },
+    {
+      "input": "Percentage <= 100",
+      "expected": {
+        "maximum": 100
+      },
+      "actual": {
+        "maximum": 100
+      },
+      "correct": true,
+      "confidence": 0.9999147653579712
+    },
+    {
+      "input": "Amount <= 100",
+      "expected": {
+        "maximum": 100
+      },
+      "actual": {
+        "maximum": 100
+      },
+      "correct": true,
+      "confidence": 0.9999227523803711
+    }
+  ]
+}

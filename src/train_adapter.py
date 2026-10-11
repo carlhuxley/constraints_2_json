@@ -24,6 +24,8 @@ from transformers import (
 )
 from peft import LoraConfig, get_peft_model, TaskType
 
+from .t5_text import format_input, format_target
+
 
 class ConstraintDataset(Dataset):
     """Dataset for constraint generation training."""
@@ -40,9 +42,9 @@ class ConstraintDataset(Dataset):
     def __getitem__(self, idx):
         example = self.examples[idx]
 
-        # Format input as during inference
-        input_text = f"convert: {example['input']}"
-        target_text = json.dumps(example['output'], separators=(',', ':'))
+        # Same text format as inference (see t5_text)
+        input_text = format_input(example['input'])
+        target_text = format_target(example['output'])
 
         # Tokenize input
         model_inputs = self.tokenizer(

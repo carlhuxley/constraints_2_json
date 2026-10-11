@@ -26,3 +26,9 @@ htmlcov/
 
 # Output files
 enriched.json
+enriched_*.json
+audit.json
+
+# Training artefacts (final_adapter/ is tracked; checkpoints and logs are not)
+adapters/*/best_checkpoint/
+adapters/*/train.log

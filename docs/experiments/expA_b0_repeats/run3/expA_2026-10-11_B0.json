@@ -1,0 +1,334 @@
+{
+  "metadata": {
+    "date": "2026-10-11",
+    "git_sha": "ab15ac341d3c60f8c413eabfa4651828c892e251",
+    "git_dirty": false,
+    "dataset": "training_data/holdout_financial_test.json",
+    "dataset_sha256": "f6f32e5ab4301c0d2ec9828293664fc0a545f0084faf7980312f284caeb79e9d",
+    "llm_model": "deepseek/deepseek-chat",
+    "orig_adapter": "adapters/adapter_financial_v1_rebuild/final_adapter",
+    "retrained_adapter": "adapters/adapter_financial_v2/final_adapter",
+    "hybrid_adapter": "adapters/adapter_financial_v2/final_adapter"
+  },
+  "total_tests": 102,
+  "json_correctness_rate": 1.0,
+  "schema_valid_rate": 1.0,
+  "exact_match_rate": 0.5686274509803921,
+  "semantic_match_rate": 0.9607843137254902,
+  "average_latency_ms": 2157.6633366765273,
+  "failures": [
+    {
+      "input": "Sort code is six digits with no separators",
+      "expected": "{\"pattern\":\"^[0-9]{6}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^\\\\d{6}$\"}"
+    },
+    {
+      "input": "Branch identifier consists of exactly 4 numeric characters",
+      "expected": "{\"pattern\":\"^[0-9]{4}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^[0-9]{4}$\",\"minLength\":4,\"maxLength\":4}"
+    },
+    {
+      "input": "Customer reference begins with CUST and then 8 digits",
+      "expected": "{\"pattern\":\"^CUST[0-9]{8}$\"}",
+      "actual": "{\"type\":\"string\",\"minLength\":12,\"maxLength\":12,\"pattern\":\"^CUST\\\\d{8}$\"}"
+    },
+    {
+      "input": "Invoice numbers look like INV- followed by six digits",
+      "expected": "{\"pattern\":\"^INV-[0-9]{6}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^INV-\\\\d{6}$\"}"
+    },
+    {
+      "input": "Currency code is three capital letters",
+      "expected": "{\"pattern\":\"^[A-Z]{3}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^[A-Z]{3}$\"}"
+    },
+    {
+      "input": "Policy number: two uppercase letters then 7 digits",
+      "expected": "{\"pattern\":\"^[A-Z]{2}[0-9]{7}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^[A-Z]{2}\\\\d{7}$\",\"minLength\":9,\"maxLength\":9}"
+    },
+    {
+      "input": "Security PIN contains 6 numbers only",
+      "expected": "{\"pattern\":\"^[0-9]{6}$\"}",
+      "actual": "{\"type\":\"string\",\"minLength\":6,\"maxLength\":6,\"pattern\":\"^[0-9]{6}$\"}"
+    },
+    {
+      "input": "ABA transit code: nine numeric characters",
+      "expected": "{\"pattern\":\"^[0-9]{9}$\"}",
+      "actual": "{\"type\":\"string\",\"minLength\":9,\"maxLength\":9,\"pattern\":\"^[0-9]{9}$\"}"
+    },
+    {
+      "input": "Merchant category code is a four-digit number stored as text",
+      "expected": "{\"pattern\":\"^[0-9]{4}$\"}",
+      "actual": "{\"type\":\"string\",\"minLength\":4,\"maxLength\":4,\"pattern\":\"^\\\\d{4}$\"}"
+    },
+    {
+      "input": "Batch IDs start with the prefix BAT and end with 5 digits",
+      "expected": "{\"pattern\":\"^BAT[0-9]{5}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^BAT\\\\d{5}$\"}"
+    },
+    {
+      "input": "Postcode district: one or two capital letters then one or two digits",
+      "expected": "{\"pattern\":\"^[A-Z]{1,2}[0-9]{1,2}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^[A-Z]{1,2}\\\\d{1,2}$\"}"
+    },
+    {
+      "input": "Ledger code is three digits, a dash, then three digits",
+      "expected": "{\"pattern\":\"^[0-9]{3}-[0-9]{3}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^\\\\d{3}-\\\\d{3}$\",\"minLength\":7,\"maxLength\":7}"
+    },
+    {
+      "input": "Only uppercase letters are allowed",
+      "expected": "{\"pattern\":\"^[A-Z]+$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^[A-Z]+$\"}"
+    },
+    {
+      "input": "May contain digits only, any length",
+      "expected": "{\"pattern\":\"^[0-9]+$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^\\\\d*$\"}"
+    },
+    {
+      "input": "Expiry given as two digits, a slash, and two more digits",
+      "expected": "{\"pattern\":\"^[0-9]{2}/[0-9]{2}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^\\\\d{2}/\\\\d{2}$\"}"
+    },
+    {
+      "input": "BIC: 8 uppercase letters or digits",
+      "expected": "{\"pattern\":\"^[A-Z0-9]{8}$\"}",
+      "actual": "{\"type\":\"string\",\"minLength\":8,\"maxLength\":8,\"pattern\":\"^[A-Z0-9]{8}$\"}"
+    },
+    {
+      "input": "Tax reference made of ten numerals",
+      "expected": "{\"pattern\":\"^[0-9]{10}$\"}",
+      "actual": "{\"type\":\"string\",\"minLength\":10,\"maxLength\":10,\"pattern\":\"^[0-9]{10}$\"}"
+    },
+    {
+      "input": "Voucher: four blocks of four uppercase letters or digits separated by hyphens",
+      "expected": "{\"pattern\":\"^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$\"}",
+      "actual": "{\"type\":\"string\",\"pattern\":\"^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$\"}"
+    },
+    {
+      "input": "Accepted payment channels: ONLINE, BRANCH, PHONE",
+      "expected": "{\"enum\":[\"ONLINE\",\"BRANCH\",\"PHONE\"]}",
+      "actual": "{\"type\":\"string\",\"enum\":[\"ONLINE\",\"BRANCH\",\"PHONE\"]}"
+    },
+    {
+      "input": "Frequency options are WEEKLY, MONTHLY, QUARTERLY, ANNUALLY",
+      "expected": "{\"enum\":[\"WEEKLY\",\"MONTHLY\",\"QUARTERLY\",\"ANNUALLY\"]}",
+      "actual": "{\"type\":\"string\",\"enum\":[\"WEEKLY\",\"MONTHLY\",\"QUARTERLY\",\"ANNUALLY\"]}"
+    },
+    {
+      "input": "Statement delivery preference: PAPER or EMAIL",
+      "expected": "{\"enum\":[\"PAPER\",\"EMAIL\"]}",
+      "actual": "{\"type\":\"string\",\"enum\":[\"PAPER\",\"EMAIL\"]}"
+    },
+    {
+      "input": "Channel code limited to ATM, POS, ECOM",
+      "expected": "{\"enum\":[\"ATM\",\"POS\",\"ECOM\"]}",
+      "actual": "{\"type\":\"string\",\"enum\":[\"ATM\",\"POS\",\"ECOM\"]}"
+    },
+    {
+      "input": "Customer segment: RETAIL, SME, CORPORATE",
+      "expected": "{\"enum\":[\"RETAIL\",\"SME\",\"CORPORATE\"]}",
+      "actual": "{\"type\":\"string\",\"enum\":[\"RETAIL\",\"SME\",\"CORPORATE\"]}"
+    },
+    {
+      "input": "A bureau score is valid only from 300 up to 850",
+      "expected": "{\"minimum\":300,\"maximum\":850}",
+      "actual": "{\"type\":\"integer\",\"minimum\":300,\"maximum\":850}"
+    },
+    {
+      "input": "Day of month 1 through 31",
+      "expected": "{\"minimum\":1,\"maximum\":31}",
+      "actual": "{\"type\":\"integer\",\"minimum\":1,\"maximum\":31}"
+    },
+    {
+      "input": "Hour field accepts 0-23",
+      "expected": "{\"minimum\":0,\"maximum\":23}",
+      "actual": "{\"type\":\"integer\",\"minimum\":0,\"maximum\":23}"
+    },
+    {
+      "input": "Number of signatories cannot be less than 1",
+      "expected": "{\"minimum\":1}",
+      "actual": "{\"type\":\"integer\",\"minimum\":1}"
+    },
+    {
+      "input": "Fee should never be negative",
+      "expected": "{\"minimum\":0}",
+      "actual": "{\"exclusiveMinimum\":0}"
+    },
+    {
+      "input": "Payee reference limited to 18 characters",
+      "expected": "{\"maxLength\":18}",
+      "actual": "{\"type\":\"string\",\"maxLength\":18}"
+    },
+    {
+      "input": "Narrative field accepts no more than 140 characters",
+      "expected": "{\"maxLength\":140}",
+      "actual": "{\"type\":\"string\",\"maxLength\":140}"
+    },
+    {
+      "input": "Street line can hold up to 70 chars",
+      "expected": "{\"maxLength\":70}",
+      "actual": "{\"type\":\"string\",\"maxLength\":70}"
+    },
+    {
+      "input": "Display label, max length 12",
+      "expected": "{\"maxLength\":12}",
+      "actual": "{\"type\":\"string\",\"maxLength\":12}"
+    },
+    {
+      "input": "Contact address has to be a well-formed email",
+      "expected": "{\"format\":\"email\"}",
+      "actual": "{\"type\":\"string\",\"format\":\"email\"}"
+    },
+    {
+      "input": "Value date in YYYY-MM-DD form",
+      "expected": "{\"format\":\"date\"}",
+      "actual": "{\"type\":\"string\",\"format\":\"date\",\"pattern\":\"^\\\\d{4}-\\\\d{2}-\\\\d{2}$\"}"
+    },
+    {
+      "input": "Timestamp must include both date and time (ISO 8601)",
+      "expected": "{\"format\":\"date-time\"}",
+      "actual": "{\"type\":\"string\",\"format\":\"date-time\"}"
+    },
+    {
+      "input": "Link to the statement must be a valid web address",
+      "expected": "{\"format\":\"uri\"}",
+      "actual": "{\"type\":\"string\",\"format\":\"uri\"}"
+    },
+    {
+      "input": "Record key must be a UUID",
+      "expected": "{\"format\":\"uuid\"}",
+      "actual": "{\"type\":\"string\",\"format\":\"uuid\"}"
+    },
+    {
+      "input": "Mandatory text, must not be left blank",
+      "expected": "{\"minLength\":1}",
+      "actual": "{\"type\":\"string\",\"minLength\":1}"
+    },
+    {
+      "input": "Surname should have at least two characters",
+      "expected": "{\"minLength\":2}",
+      "actual": "{\"type\":\"string\",\"minLength\":2}"
+    },
+    {
+      "input": "Service charge must be 12 or less",
+      "expected": "{\"maximum\":12}",
+      "actual": "{\"type\":\"number\",\"maximum\":12}"
+    },
+    {
+      "input": "Insurance premium is required to be positive",
+      "expected": "{\"exclusiveMinimum\":0}",
+      "actual": "{\"type\":\"number\",\"exclusiveMinimum\":0}"
+    },
+    {
+      "input": "Net worth figure must not fall under zero",
+      "expected": "{\"minimum\":0}",
+      "actual": "{\"exclusiveMinimum\":0}"
+    },
+    {
+      "input": "Reference must be 4 to 16 characters long",
+      "expected": "{\"minLength\":4,\"maxLength\":16}",
+      "actual": "{\"type\":\"string\",\"minLength\":4,\"maxLength\":16}"
+    },
+    {
+      "input": "Reference count must be 4 to 16",
+      "expected": "{\"minimum\":4,\"maximum\":16}",
+      "actual": "{\"type\":\"integer\",\"minimum\":4,\"maximum\":16}"
+    }
+  ],
+  "condition": "B0",
+  "median_latency_ms": 1754.9178721383214,
+  "p99_latency_ms": 9597.456838004291,
+  "by_constraint_type": {
+    "contrastive/exclusiveMinimum": {
+      "total_tests": 4,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 0.75,
+      "schema_valid_rate": 1.0
+    },
+    "contrastive/length-range": {
+      "total_tests": 1,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 0.0,
+      "schema_valid_rate": 1.0
+    },
+    "contrastive/maximum": {
+      "total_tests": 6,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 0.8333333333333334,
+      "schema_valid_rate": 1.0
+    },
+    "contrastive/minimum": {
+      "total_tests": 10,
+      "semantic_match_rate": 0.9,
+      "exact_match_rate": 0.9,
+      "schema_valid_rate": 1.0
+    },
+    "contrastive/range": {
+      "total_tests": 1,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 0.0,
+      "schema_valid_rate": 1.0
+    },
+    "enum": {
+      "total_tests": 14,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 0.6428571428571429,
+      "schema_valid_rate": 1.0
+    },
+    "exclusiveMinimum": {
+      "total_tests": 3,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 1.0,
+      "schema_valid_rate": 1.0
+    },
+    "format": {
+      "total_tests": 5,
+      "semantic_match_rate": 0.8,
+      "exact_match_rate": 0.0,
+      "schema_valid_rate": 1.0
+    },
+    "maxLength": {
+      "total_tests": 6,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 0.3333333333333333,
+      "schema_valid_rate": 1.0
+    },
+    "maximum": {
+      "total_tests": 8,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 1.0,
+      "schema_valid_rate": 1.0
+    },
+    "minLength": {
+      "total_tests": 3,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 0.3333333333333333,
+      "schema_valid_rate": 1.0
+    },
+    "minimum": {
+      "total_tests": 11,
+      "semantic_match_rate": 0.9090909090909091,
+      "exact_match_rate": 0.8181818181818182,
+      "schema_valid_rate": 1.0
+    },
+    "pattern": {
+      "total_tests": 18,
+      "semantic_match_rate": 0.9444444444444444,
+      "exact_match_rate": 0.0,
+      "schema_valid_rate": 1.0
+    },
+    "range": {
+      "total_tests": 12,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 0.75,
+      "schema_valid_rate": 1.0
+    }
+  },
+  "llm_served_by": {
+    "deepseek/deepseek-chat via DeepInfra": 75,
+    "deepseek/deepseek-chat via StreamLake": 27
+  }
+}

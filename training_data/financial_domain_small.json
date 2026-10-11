@@ -1,0 +1,35 @@
+{
+  "domain": "financial",
+  "examples": [
+    {
+      "input": "Balance must not be negative",
+      "output": {
+        "minimum": 0
+      }
+    },
+    {
+      "input": "Balance cannot be negative",
+      "output": {
+        "minimum": 0
+      }
+    },
+    {
+      "input": "Balance must be zero or greater",
+      "output": {
+        "minimum": 0
+      }
+    },
+    {
+      "input": "Balance must be positive or zero",
+      "output": {
+        "minimum": 0
+      }
+    },
+    {
+      "input": "No negative balances allowed",
+      "output": {
+        "minimum": 0
+      }
+    }
+  ]
+}

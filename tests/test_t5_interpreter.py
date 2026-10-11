@@ -163,3 +163,60 @@ class TestT5InterpreterIntegration:
         """Should generate maxLength constraint."""
         result = interpreter.interpret("Maximum 100 characters")
         assert result.get("maxLength") == 100
+
+
+@pytest.mark.skipif(
+    not os.path.exists("adapters/adapter_financial/final_adapter/tokenizer_config.json"),
+    reason="T5 tokenizer not available"
+)
+class TestT5InterpreterTextFormat:
+    """interpret() must use the shared t5_text format in both directions."""
+
+    @pytest.fixture
+    def interpreter_emitting(self):
+        """Interpreter with the real tokenizer and a model that emits fixed text."""
+        import torch
+        from transformers import AutoTokenizer
+        from src.t5_interpreter import T5Interpreter
+
+        tokenizer = AutoTokenizer.from_pretrained("adapters/adapter_financial/final_adapter")
+
+        def build(model_output_text):
+            ids = tokenizer(model_output_text).input_ids
+            model = Mock()
+            model.generate.return_value = Mock(sequences=torch.tensor([ids]), scores=())
+            model.compute_transition_scores.return_value = torch.log(
+                torch.tensor([[0.9] * (len(ids) - 1) + [0.6]])
+            )
+            with patch.object(T5Interpreter, '__init__', lambda x, **kw: None):
+                interpreter = T5Interpreter()
+            interpreter.tokenizer = tokenizer
+            interpreter.model = model
+            interpreter.device = "cpu"
+            return interpreter, model
+
+        return build
+
+    def test_returns_pattern_with_regex_metacharacters(self, interpreter_emitting):
+        from src.t5_text import format_target
+
+        expected = {"pattern": "^[0-9]{6}$"}
+        interpreter, _ = interpreter_emitting(format_target(expected))
+
+        assert interpreter.interpret("Sort code is six digits") == expected
+
+    def test_model_sees_encoded_rule(self, interpreter_emitting):
+        from src.t5_text import format_input
+
+        interpreter, model = interpreter_emitting('"maximum":5')
+        interpreter.interpret("Amount <= 5")
+
+        sent_ids = model.generate.call_args.kwargs["input_ids"][0].tolist()
+        expected_ids = interpreter.tokenizer(format_input("Amount <= 5")).input_ids
+        assert sent_ids == expected_ids
+
+    def test_confidence_is_least_certain_token_probability(self, interpreter_emitting):
+        interpreter, _ = interpreter_emitting('"maximum":5')
+        interpreter.interpret("Amount <= 5")
+
+        assert interpreter.last_confidence == pytest.approx(0.6)

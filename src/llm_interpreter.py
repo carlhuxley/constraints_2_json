@@ -34,6 +34,13 @@ class OpenRouterClient:
         self.model = model
         self.api_key = api_key or os.environ.get("OPENROUTER_API_KEY")
         self.api_url = "https://openrouter.ai/api/v1/chat/completions"
+        # Which model/provider OpenRouter actually routed each successful call to.
+        # The requested slug can be served by different hosts or re-pointed to a
+        # newer version, so this is needed to make results traceable.
+        self.call_log: list = []
+        # Failed calls return "" so callers can degrade gracefully; recording them lets an
+        # evaluation tell a failed call apart from a model that answered with nothing.
+        self.error_log: list = []
 
     def complete(self, prompt: str, temperature: float = 0.0) -> str:
         """
@@ -53,8 +60,8 @@ class OpenRouterClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://github.com/google/gemini-cli",  # Optional
-            "X-Title": "Gemini CLI",  # Optional
+            "HTTP-Referer": "https://github.com/carlhuxley/constraints_2_json",  # OpenRouter app attribution
+            "X-Title": "constraints_2_json",
         }
 
         data = {
@@ -72,9 +79,17 @@ class OpenRouterClient:
             )
             response.raise_for_status()
             result = response.json()
-            return result["choices"][0]["message"]["content"]
+            content = result["choices"][0]["message"]["content"]
+            self.call_log.append({
+                "requested_model": self.model,
+                "model": result.get("model"),
+                "provider": result.get("provider"),
+                "id": result.get("id"),
+            })
+            return content
         except Exception as e:
             print(f"Error calling OpenRouter: {e}")
+            self.error_log.append(str(e))
             return ""
 
 
