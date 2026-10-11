@@ -4,7 +4,8 @@ Hybrid Interpreter - T5 with LLM fallback for constraint generation.
 This module provides a hybrid approach that:
 1. Attempts fast T5 inference first
 2. Validates the output against the field type
-3. Falls back to LLM if T5 fails or produces invalid output
+3. Falls back to LLM if T5 fails, produces invalid output, or is not
+   confident enough (optional confidence_threshold)
 4. Logs all failures for analysis and model improvement
 """
 import json
@@ -96,6 +97,7 @@ class HybridStats:
     t5_failures: int = 0
     llm_fallbacks: int = 0
     llm_failures: int = 0
+    low_confidence: int = 0
     variations_generated: int = 0
     failures: List[FailureRecord] = field(default_factory=list)
     training_log: List[TrainingRecord] = field(default_factory=list)
@@ -122,6 +124,7 @@ class HybridStats:
             "t5_failures": self.t5_failures,
             "llm_fallbacks": self.llm_fallbacks,
             "llm_failures": self.llm_failures,
+            "low_confidence": self.low_confidence,
             "variations_generated": self.variations_generated,
             "t5_success_rate": f"{self.t5_success_rate:.1%}",
             "fallback_rate": f"{self.fallback_rate:.1%}",
@@ -145,6 +148,7 @@ class HybridInterpreter:
         failure_log_path: Optional[str] = None,
         collect_training_data: bool = False,
         training_log_path: Optional[str] = None,
+        confidence_threshold: Optional[float] = None,
     ):
         """
         Initialize hybrid interpreter.
@@ -156,6 +160,9 @@ class HybridInterpreter:
             failure_log_path: Path to write failure log JSON
             collect_training_data: Whether to log successful interpretations
             training_log_path: Path to write training data JSON
+            confidence_threshold: Fall back to LLM when T5's last_confidence is
+                below this (None disables the check). If the LLM then fails,
+                the valid low-confidence T5 answer is kept.
         """
         self.t5 = t5_interpreter
         self.llm_client = llm_client
@@ -164,6 +171,8 @@ class HybridInterpreter:
         self.failure_log_path = failure_log_path or "t5_failures.json"
         self.collect_training_data = collect_training_data
         self.training_log_path = training_log_path or "training_data_collected.json"
+        self.confidence_threshold = confidence_threshold
+        self._low_confidence_result: Optional[dict] = None
         self.stats = HybridStats()
 
     def interpret(
@@ -187,6 +196,7 @@ class HybridInterpreter:
         """
         self.stats.total_calls += 1
         self.last_source = None
+        self._low_confidence_result = None
 
         # Try T5 first if available
         if self.t5 is not None:
@@ -215,6 +225,11 @@ class HybridInterpreter:
                     self._log_llm_variations(field_name, field_type, business_rule, llm_result)
                 return llm_result
             self.stats.llm_failures += 1
+
+        # T5's answer was valid, just not confident - better than nothing
+        if self._low_confidence_result is not None:
+            self.last_source = "t5"
+            return self._low_confidence_result
 
         # Both failed
         self.last_source = "none"
@@ -260,6 +275,17 @@ class HybridInterpreter:
                     result, errors
                 )
                 return None
+
+            if self.confidence_threshold is not None:
+                confidence = getattr(self.t5, "last_confidence", None)
+                if confidence is not None and confidence < self.confidence_threshold:
+                    self.stats.low_confidence += 1
+                    self._low_confidence_result = result
+                    self._log_failure(
+                        field_name, field_type, business_rule, result,
+                        [f"Low confidence {confidence:.3f} < {self.confidence_threshold}"]
+                    )
+                    return None
 
             return result
 

@@ -199,6 +199,7 @@ def build_interpreter(condition: str, args):
             # Keep evaluation side-effect free: no t5_failures.json / training-data writes.
             log_failures=False,
             collect_training_data=False,
+            confidence_threshold=args.confidence_threshold,
         )
         return FieldTypeAdapter(
             hybrid.interpret, source_fn=lambda: hybrid.last_source, llm_client=client
@@ -239,6 +240,7 @@ def run_metadata(dataset_path: str, args) -> dict:
         "orig_adapter": args.orig_adapter,
         "retrained_adapter": args.retrained_adapter,
         "hybrid_adapter": args.hybrid_adapter,
+        "confidence_threshold": args.confidence_threshold,
     }
 
 
@@ -296,6 +298,9 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--retrained-adapter", default=DEFAULT_RETRAINED_ADAPTER)
     parser.add_argument("--hybrid-adapter",
                         help="Adapter used inside Hybrid (default: --retrained-adapter, per §3.4)")
+    parser.add_argument("--confidence-threshold", type=float,
+                        help="Hybrid sends T5 answers whose least certain token is below this "
+                             "probability to the LLM (default: off). Fix it before seeing test results.")
     parser.add_argument("--conditions", nargs="+",
                         help="Run only these conditions (e.g. T5-orig) - for partial runs")
     args = parser.parse_args(argv)

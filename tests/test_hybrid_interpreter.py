@@ -157,6 +157,70 @@ class TestHybridInterpreter:
             assert interpreter.stats.llm_failures == 1
 
 
+
+class TestConfidenceGate:
+    """confidence_threshold sends valid but uncertain T5 answers to the LLM."""
+
+    def _hybrid(self, confidence, threshold, llm_result):
+        from src.hybrid_interpreter import HybridInterpreter
+
+        mock_t5 = Mock()
+        mock_t5.interpret.return_value = {"minimum": 18}
+        mock_t5.last_confidence = confidence
+        interpreter = HybridInterpreter(
+            t5_interpreter=mock_t5,
+            llm_client=Mock(),
+            log_failures=False,
+            confidence_threshold=threshold,
+        )
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret:
+            mock_interpret.return_value = llm_result
+            result = interpreter.interpret("age", "integer", "Over 18")
+        return interpreter, result, mock_interpret
+
+    def test_low_confidence_triggers_llm_fallback(self):
+        interpreter, result, mock_interpret = self._hybrid(0.4, 0.8, {"exclusiveMinimum": 18})
+
+        assert result == {"exclusiveMinimum": 18}
+        assert mock_interpret.called
+        assert interpreter.last_source == "llm"
+        assert interpreter.stats.low_confidence == 1
+        assert interpreter.stats.llm_fallbacks == 1
+
+    def test_confident_t5_answer_is_used(self):
+        interpreter, result, mock_interpret = self._hybrid(0.95, 0.8, {"exclusiveMinimum": 18})
+
+        assert result == {"minimum": 18}
+        assert not mock_interpret.called
+        assert interpreter.last_source == "t5"
+        assert interpreter.stats.low_confidence == 0
+
+    def test_no_threshold_ignores_confidence(self):
+        interpreter, result, mock_interpret = self._hybrid(0.01, None, {"exclusiveMinimum": 18})
+
+        assert result == {"minimum": 18}
+        assert not mock_interpret.called
+
+    def test_keeps_t5_answer_when_llm_fails(self):
+        interpreter, result, _ = self._hybrid(0.4, 0.8, {})
+
+        assert result == {"minimum": 18}
+        assert interpreter.last_source == "t5"
+        assert interpreter.stats.llm_failures == 1
+
+    def test_low_confidence_answer_not_reused_on_next_call(self):
+        """A held low-confidence answer must not leak into a later call."""
+        interpreter, _, _ = self._hybrid(0.4, 0.8, {"exclusiveMinimum": 18})
+        interpreter.t5.interpret.return_value = {}
+
+        with patch('src.llm_interpreter.interpret_business_rule') as mock_interpret:
+            mock_interpret.return_value = {}
+            result = interpreter.interpret("age", "integer", "Something else")
+
+        assert result == {}
+        assert interpreter.last_source == "none"
+
+
 class TestFailureLogging:
     """Test failure logging functionality."""
 

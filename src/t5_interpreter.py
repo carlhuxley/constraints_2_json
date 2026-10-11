@@ -114,10 +114,14 @@ class T5Interpreter:
         self.model = PeftModel.from_pretrained(self.base_model, adapter_path)
         self.model.to(self.device)
         self.model.eval()
+        self.last_confidence: Optional[float] = None
 
     def interpret(self, business_rule: str) -> dict:
         """
         Convert a business rule to JSON Schema constraints.
+
+        Also sets ``last_confidence``: the probability of the least certain
+        token in the generated output (0-1).
 
         Args:
             business_rule: Free-text business rule (e.g., "Must be at least 18")
@@ -136,18 +140,27 @@ class T5Interpreter:
             truncation=True,
         ).to(self.device)
 
-        # Generate
-        with __import__("torch").no_grad():
+        # Generate (greedy; scores are kept only to measure confidence)
+        torch = __import__("torch")
+        with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
                 max_length=128,
                 num_beams=1,
                 do_sample=False,
+                output_scores=True,
+                return_dict_in_generate=True,
             )
+            token_logprobs = self.model.compute_transition_scores(
+                outputs.sequences, outputs.scores, normalize_logits=True
+            )[0]
+
+        # Confidence = probability of the least certain generated token
+        self.last_confidence = float(torch.exp(token_logprobs.min()))
 
         # Decode
         raw_output = decode_output(
-            self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            self.tokenizer.decode(outputs.sequences[0], skip_special_tokens=True)
         )
 
         # Parse to JSON

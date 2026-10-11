@@ -182,9 +182,11 @@ class TestT5InterpreterTextFormat:
         tokenizer = AutoTokenizer.from_pretrained("adapters/adapter_financial/final_adapter")
 
         def build(model_output_text):
+            ids = tokenizer(model_output_text).input_ids
             model = Mock()
-            model.generate.return_value = torch.tensor(
-                [tokenizer(model_output_text).input_ids]
+            model.generate.return_value = Mock(sequences=torch.tensor([ids]), scores=())
+            model.compute_transition_scores.return_value = torch.log(
+                torch.tensor([[0.9] * (len(ids) - 1) + [0.6]])
             )
             with patch.object(T5Interpreter, '__init__', lambda x, **kw: None):
                 interpreter = T5Interpreter()
@@ -212,3 +214,9 @@ class TestT5InterpreterTextFormat:
         sent_ids = model.generate.call_args.kwargs["input_ids"][0].tolist()
         expected_ids = interpreter.tokenizer(format_input("Amount <= 5")).input_ids
         assert sent_ids == expected_ids
+
+    def test_confidence_is_least_certain_token_probability(self, interpreter_emitting):
+        interpreter, _ = interpreter_emitting('"maximum":5')
+        interpreter.interpret("Amount <= 5")
+
+        assert interpreter.last_confidence == pytest.approx(0.6)
