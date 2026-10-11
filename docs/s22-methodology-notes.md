@@ -120,6 +120,7 @@ the existing 3-example prompt). This is the "just call the LLM" option H0 defend
 | T5-orig | LoRA adapter rebuilt locally on the 509-example set (`adapters/adapter_financial_v1_rebuild/final_adapter`) — **not** the shipped notebook adapter; see §4 Experiment B |
 | T5-retrained | LoRA adapter retrained on the 787-example combined set |
 | Hybrid | T5-retrained + `validate_node_constraints` gate + LLM fallback |
+| Hybrid (confidence gate) | Hybrid + LLM fallback when T5's least certain token has probability < 0.7 (see §4 Experiment A) |
 
 **Metrics** (all already implemented in `src/model_evaluator.py`, run via `EvaluationSuite`):
 
@@ -217,6 +218,21 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
   result between two runs on the same day, both served by DeepInfra/StreamLake). Run B0 three
   times and report the mean and range, not a single run; the extra runs are in
   `docs/experiments/expA_b0_repeats/`.
+- **Hybrid confidence gate (threshold fixed before the held-out run).** The validity-only gate
+  never fired (§6), so Hybrid is re-run with a second trigger: fall back to the LLM when T5's
+  confidence, the probability of its least certain generated token, is below **0.7**
+  (`--confidence-threshold 0.7`). If that LLM call fails, the valid T5 answer is kept.
+  The threshold was chosen on the v2 adapter's own validation split (79 examples it was not
+  trained on; `scripts/confidence_calibration.py`,
+  `docs/experiments/confidence_2026-10-11_adapter_financial_v2.json`): AUROC 0.93; at 0.7 the gate
+  catches 4 of 5 T5 errors at a 10.1% fallback rate. It is recorded here and committed before the
+  held-out run so it cannot be tuned to the test set. Caveats: only 5 validation errors; the
+  split is easier than the held-out set (93.7% vs 77.5%) because training files hold near-duplicate
+  phrasings; none of the 5 errors is a `>`/`>=` confusion; and 2 of the 4 caught were empty outputs
+  the validity gate already catches. Expect the gate to help on malformed patterns and little on
+  confidently wrong operators (e.g. "over 18" → `minimum` at confidence 0.95). The original
+  validity-only Hybrid run is kept as reported; the gated run is a separate condition in
+  `docs/experiments/expA_hybrid_gate/`.
 - **Outputs:** `docs/experiments/expA_<date>_*.json` + a results table in the report.
 
 ### Experiment B — EDA-driven (does rebalancing the training data help?)
