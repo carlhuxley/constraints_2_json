@@ -1,0 +1,57 @@
+{
+  "experiment": "A",
+  "metadata": {
+    "date": "2026-10-11",
+    "git_sha": "56e0540f8f5347d3b38699fbf67b4e7c163e1250",
+    "git_dirty": false,
+    "dataset": "training_data/holdout_financial_test.json",
+    "dataset_sha256": "f6f32e5ab4301c0d2ec9828293664fc0a545f0084faf7980312f284caeb79e9d",
+    "llm_model": "deepseek/deepseek-chat",
+    "orig_adapter": "adapters/adapter_financial_v1_rebuild/final_adapter",
+    "retrained_adapter": "adapters/adapter_financial_v2/final_adapter",
+    "hybrid_adapter": "adapters/adapter_financial_v2/final_adapter"
+  },
+  "conditions": {
+    "B0": {
+      "total_tests": 102,
+      "json_correctness_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "exact_match_rate": 0.5490196078431373,
+      "semantic_match_rate": 0.9705882352941176,
+      "average_latency_ms": 1516.8245965295343,
+      "condition": "B0",
+      "median_latency_ms": 1434.2845992650837,
+      "p99_latency_ms": 3229.356162250042,
+      "llm_served_by": {
+        "deepseek/deepseek-chat via DeepInfra": 77,
+        "deepseek/deepseek-chat via StreamLake": 25
+      }
+    },
+    "T5-orig": {
+      "total_tests": 102,
+      "json_correctness_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "exact_match_rate": 0.7254901960784313,
+      "semantic_match_rate": 0.7254901960784313,
+      "average_latency_ms": 796.2777434857379,
+      "condition": "T5-orig",
+      "median_latency_ms": 699.1616578307003,
+      "p99_latency_ms": 1371.4534831233323
+    },
+    "Hybrid": {
+      "total_tests": 102,
+      "json_correctness_rate": 1.0,
+      "schema_valid_rate": 1.0,
+      "exact_match_rate": 0.7745098039215687,
+      "semantic_match_rate": 0.7745098039215687,
+      "average_latency_ms": 866.7970059037793,
+      "condition": "Hybrid",
+      "median_latency_ms": 719.0435284283012,
+      "p99_latency_ms": 1998.0122740380466,
+      "routing": {
+        "t5": 102
+      },
+      "fallback_rate": 0.0
+    }
+  }
+}

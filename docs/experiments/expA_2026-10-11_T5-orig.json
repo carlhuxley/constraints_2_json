@@ -1,0 +1,250 @@
+{
+  "metadata": {
+    "date": "2026-10-11",
+    "git_sha": "56e0540f8f5347d3b38699fbf67b4e7c163e1250",
+    "git_dirty": false,
+    "dataset": "training_data/holdout_financial_test.json",
+    "dataset_sha256": "f6f32e5ab4301c0d2ec9828293664fc0a545f0084faf7980312f284caeb79e9d",
+    "llm_model": "deepseek/deepseek-chat",
+    "orig_adapter": "adapters/adapter_financial_v1_rebuild/final_adapter",
+    "retrained_adapter": "adapters/adapter_financial_v2/final_adapter",
+    "hybrid_adapter": "adapters/adapter_financial_v2/final_adapter"
+  },
+  "total_tests": 102,
+  "json_correctness_rate": 1.0,
+  "schema_valid_rate": 1.0,
+  "exact_match_rate": 0.7254901960784313,
+  "semantic_match_rate": 0.7254901960784313,
+  "average_latency_ms": 796.2777434857379,
+  "failures": [
+    {
+      "input": "Branch identifier consists of exactly 4 numeric characters",
+      "expected": "{\"pattern\":\"^[0-9]{4}$\"}",
+      "actual": "{\"pattern\":\"^[A-Z0-9]{4}$\"}"
+    },
+    {
+      "input": "Customer reference begins with CUST and then 8 digits",
+      "expected": "{\"pattern\":\"^CUST[0-9]{8}$\"}",
+      "actual": "{\"pattern\":\"^CUST\"}"
+    },
+    {
+      "input": "Policy number: two uppercase letters then 7 digits",
+      "expected": "{\"pattern\":\"^[A-Z]{2}[0-9]{7}$\"}",
+      "actual": "{\"pattern\":\"^[0-9]{2}$\"}"
+    },
+    {
+      "input": "ABA transit code: nine numeric characters",
+      "expected": "{\"pattern\":\"^[0-9]{9}$\"}",
+      "actual": "{\"pattern\":\"^[A-Z0-9]{9}$\"}"
+    },
+    {
+      "input": "Merchant category code is a four-digit number stored as text",
+      "expected": "{\"pattern\":\"^[0-9]{4}$\"}",
+      "actual": "{\"pattern\":\"^[A-Z]{4}$\"}"
+    },
+    {
+      "input": "Postcode district: one or two capital letters then one or two digits",
+      "expected": "{\"pattern\":\"^[A-Z]{1,2}[0-9]{1,2}$\"}",
+      "actual": "{\"pattern\":\"^[A-Z]{1}(-[A-Z]{2})?$\"}"
+    },
+    {
+      "input": "Ledger code is three digits, a dash, then three digits",
+      "expected": "{\"pattern\":\"^[0-9]{3}-[0-9]{3}$\"}",
+      "actual": "{\"pattern\":\"^[0-9]{3}$\"}"
+    },
+    {
+      "input": "Only uppercase letters are allowed",
+      "expected": "{\"pattern\":\"^[A-Z]+$\"}",
+      "actual": "{\"pattern\":\"^[A-Z]{4}$\"}"
+    },
+    {
+      "input": "May contain digits only, any length",
+      "expected": "{\"pattern\":\"^[0-9]+$\"}",
+      "actual": "{\"pattern\":\"^[0-9]{3}$\"}"
+    },
+    {
+      "input": "Expiry given as two digits, a slash, and two more digits",
+      "expected": "{\"pattern\":\"^[0-9]{2}/[0-9]{2}$\"}",
+      "actual": "{\"pattern\":\"^[0-9]{2}$\"}"
+    },
+    {
+      "input": "BIC: 8 uppercase letters or digits",
+      "expected": "{\"pattern\":\"^[A-Z0-9]{8}$\"}",
+      "actual": "{\"pattern\":\"^[A-Z]{8}$\"}"
+    },
+    {
+      "input": "Voucher: four blocks of four uppercase letters or digits separated by hyphens",
+      "expected": "{\"pattern\":\"^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$\"}",
+      "actual": "{\"pattern\":\"^[A-Z]{4}$\"}"
+    },
+    {
+      "input": "KYC outcome must be one of PASS, FAIL, REFER",
+      "expected": "{\"enum\":[\"PASS\",\"FAIL\",\"REFER\"]}",
+      "actual": "{\"enum\":[\"PASS\",\"FAITH\",\"REFER\"]}"
+    },
+    {
+      "input": "Permitted instalment counts are 3, 6 or 12",
+      "expected": "{\"enum\":[3,6,12]}",
+      "actual": "{\"enum\":[3,6]}"
+    },
+    {
+      "input": "Credit limit floor is 500",
+      "expected": "{\"minimum\":500}",
+      "actual": "{\"maximum\":500}"
+    },
+    {
+      "input": "Collateral value of 10000 or above required",
+      "expected": "{\"minimum\":10000}",
+      "actual": "{\"minimum\":1000}"
+    },
+    {
+      "input": "Monthly income must be at least 1200",
+      "expected": "{\"minimum\":1200}",
+      "actual": "{\"minimum\":200}"
+    },
+    {
+      "input": "Late payment count must be 3 or fewer",
+      "expected": "{\"maximum\":3}",
+      "actual": "{\"minimum\":3}"
+    },
+    {
+      "input": "Single payment ceiling: 20000",
+      "expected": "{\"maximum\":20000}",
+      "actual": "{\"maximum\":2000}"
+    },
+    {
+      "input": "Payee reference limited to 18 characters",
+      "expected": "{\"maxLength\":18}",
+      "actual": "{\"minLength\":18}"
+    },
+    {
+      "input": "Free-text remarks must stay within 2000 characters",
+      "expected": "{\"maxLength\":2000}",
+      "actual": "{\"minLength\":2000}"
+    },
+    {
+      "input": "Timestamp must include both date and time (ISO 8601)",
+      "expected": "{\"format\":\"date-time\"}",
+      "actual": "{\"pattern\":\"^[A-Z0-9]{2}$\"}"
+    },
+    {
+      "input": "Link to the statement must be a valid web address",
+      "expected": "{\"format\":\"uri\"}",
+      "actual": "{\"format\":\"url\"}"
+    },
+    {
+      "input": "Mandatory text, must not be left blank",
+      "expected": "{\"minLength\":1}",
+      "actual": "{\"pattern\":\"^[A-Z0-9]{3}$\"}"
+    },
+    {
+      "input": "Balance must stay at or below 2500",
+      "expected": "{\"maximum\":2500}",
+      "actual": "{\"minimum\":2500}"
+    },
+    {
+      "input": "Service charge must be 12 or less",
+      "expected": "{\"maximum\":12}",
+      "actual": "{\"minimum\":12}"
+    },
+    {
+      "input": "Yield has to exceed 0",
+      "expected": "{\"exclusiveMinimum\":0}",
+      "actual": "{\"maximum\":0}"
+    },
+    {
+      "input": "Net worth figure must exceed zero",
+      "expected": "{\"exclusiveMinimum\":0}",
+      "actual": "{\"minimum\":0}"
+    }
+  ],
+  "condition": "T5-orig",
+  "median_latency_ms": 699.1616578307003,
+  "p99_latency_ms": 1371.4534831233323,
+  "by_constraint_type": {
+    "contrastive/exclusiveMinimum": {
+      "total_tests": 4,
+      "semantic_match_rate": 0.5,
+      "exact_match_rate": 0.5,
+      "schema_valid_rate": 1.0
+    },
+    "contrastive/length-range": {
+      "total_tests": 1,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 1.0,
+      "schema_valid_rate": 1.0
+    },
+    "contrastive/maximum": {
+      "total_tests": 6,
+      "semantic_match_rate": 0.6666666666666666,
+      "exact_match_rate": 0.6666666666666666,
+      "schema_valid_rate": 1.0
+    },
+    "contrastive/minimum": {
+      "total_tests": 10,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 1.0,
+      "schema_valid_rate": 1.0
+    },
+    "contrastive/range": {
+      "total_tests": 1,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 1.0,
+      "schema_valid_rate": 1.0
+    },
+    "enum": {
+      "total_tests": 14,
+      "semantic_match_rate": 0.8571428571428571,
+      "exact_match_rate": 0.8571428571428571,
+      "schema_valid_rate": 1.0
+    },
+    "exclusiveMinimum": {
+      "total_tests": 3,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 1.0,
+      "schema_valid_rate": 1.0
+    },
+    "format": {
+      "total_tests": 5,
+      "semantic_match_rate": 0.6,
+      "exact_match_rate": 0.6,
+      "schema_valid_rate": 1.0
+    },
+    "maxLength": {
+      "total_tests": 6,
+      "semantic_match_rate": 0.6666666666666666,
+      "exact_match_rate": 0.6666666666666666,
+      "schema_valid_rate": 1.0
+    },
+    "maximum": {
+      "total_tests": 8,
+      "semantic_match_rate": 0.75,
+      "exact_match_rate": 0.75,
+      "schema_valid_rate": 1.0
+    },
+    "minLength": {
+      "total_tests": 3,
+      "semantic_match_rate": 0.6666666666666666,
+      "exact_match_rate": 0.6666666666666666,
+      "schema_valid_rate": 1.0
+    },
+    "minimum": {
+      "total_tests": 11,
+      "semantic_match_rate": 0.7272727272727273,
+      "exact_match_rate": 0.7272727272727273,
+      "schema_valid_rate": 1.0
+    },
+    "pattern": {
+      "total_tests": 18,
+      "semantic_match_rate": 0.3333333333333333,
+      "exact_match_rate": 0.3333333333333333,
+      "schema_valid_rate": 1.0
+    },
+    "range": {
+      "total_tests": 12,
+      "semantic_match_rate": 1.0,
+      "exact_match_rate": 1.0,
+      "schema_valid_rate": 1.0
+    }
+  }
+}
