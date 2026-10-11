@@ -1,8 +1,8 @@
 {
   "metadata": {
     "date": "2026-10-11",
-    "git_sha": "46b65c6ffd0af3453e231b019512e013c8207b6f",
-    "git_dirty": true,
+    "git_sha": "224f0ba5d54b5e4ddc6dd6f1453c049006429048",
+    "git_dirty": false,
     "dataset": "training_data/holdout_financial_test.json",
     "dataset_sha256": "f6f32e5ab4301c0d2ec9828293664fc0a545f0084faf7980312f284caeb79e9d",
     "llm_model": "deepseek/deepseek-chat",
@@ -15,7 +15,7 @@
   "schema_valid_rate": 1.0,
   "exact_match_rate": 0.7745098039215687,
   "semantic_match_rate": 0.7745098039215687,
-  "average_latency_ms": 1036.9623807605867,
+  "average_latency_ms": 856.3708465719851,
   "failures": [
     {
       "input": "Policy number: two uppercase letters then 7 digits",
@@ -134,8 +134,8 @@
     }
   ],
   "condition": "T5-retrained",
-  "median_latency_ms": 860.792251303792,
-  "p99_latency_ms": 2360.2712117135525,
+  "median_latency_ms": 698.3620009850711,
+  "p99_latency_ms": 1805.6736500002444,
   "by_constraint_type": {
     "contrastive/exclusiveMinimum": {
       "total_tests": 4,
