@@ -222,6 +222,68 @@ class TestSemanticMatchMetric:
         assert score == 1.0
 
 
+class TestSemanticEquivalences:
+    """
+    Equivalences SemanticMatchMetric accepts. Each is a general JSON Schema rule, not a
+    per-case allowance: the same constraint written differently must score the same.
+    """
+
+    @staticmethod
+    def score(actual, expected):
+        from src.model_evaluator import SemanticMatchMetric
+        return SemanticMatchMetric().measure(json.dumps(actual), json.dumps(expected))
+
+    def test_type_key_ignored(self):
+        """The field's type comes from the schema, not from the rule's constraints."""
+        assert self.score({"type": "string", "pattern": "^[A-Z]{3}$"},
+                          {"pattern": "^[A-Z]{3}$"}) == 1.0
+
+    def test_digit_escape_equals_ascii_digit_class(self):
+        """JSON Schema regexes are ECMA-262, where \\d is exactly [0-9]."""
+        assert self.score({"pattern": "^INV-\\d{6}$"}, {"pattern": "^INV-[0-9]{6}$"}) == 1.0
+
+    def test_digit_escape_inside_character_class(self):
+        assert self.score({"pattern": "^[\\dA-F]+$"}, {"pattern": "^[0-9A-F]+$"}) == 1.0
+
+    def test_escaped_backslash_before_d_is_not_a_digit_escape(self):
+        assert self.score({"pattern": "^\\\\d$"}, {"pattern": "^\\[0-9]$"}) == 0.0
+
+    def test_different_quantifier_still_fails(self):
+        """\\d* allows the empty string, [0-9]+ does not."""
+        assert self.score({"pattern": "^\\d*$"}, {"pattern": "^[0-9]+$"}) == 0.0
+
+    def test_length_bounds_implied_by_anchored_pattern_ignored(self):
+        assert self.score({"pattern": "^[0-9]{6}$", "minLength": 6, "maxLength": 6},
+                          {"pattern": "^[0-9]{6}$"}) == 1.0
+
+    def test_looser_length_bound_than_pattern_is_redundant(self):
+        assert self.score({"pattern": "^[A-Z]{1,2}[0-9]{1,2}$", "maxLength": 4},
+                          {"pattern": "^[A-Z]{1,2}[0-9]{1,2}$"}) == 1.0
+
+    def test_length_bound_that_narrows_pattern_still_fails(self):
+        assert self.score({"pattern": "^[0-9]{6}$", "maxLength": 5},
+                          {"pattern": "^[0-9]{6}$"}) == 0.0
+
+    def test_length_bounds_kept_for_unanchored_pattern(self):
+        assert self.score({"pattern": "[0-9]{6}", "maxLength": 6},
+                          {"pattern": "[0-9]{6}"}) == 0.0
+
+    def test_length_bounds_kept_for_top_level_alternation(self):
+        assert self.score({"pattern": "^AB$|^ABC$", "maxLength": 3},
+                          {"pattern": "^AB$|^ABC$"}) == 0.0
+
+    def test_length_bounds_kept_without_pattern(self):
+        assert self.score({"maxLength": 6, "minLength": 6}, {"maxLength": 6}) == 0.0
+
+    def test_exclusive_minimum_is_not_minimum(self):
+        assert self.score({"exclusiveMinimum": 0}, {"minimum": 0}) == 0.0
+
+    def test_exact_match_stays_strict(self):
+        from src.model_evaluator import ExactMatchMetric
+        assert ExactMatchMetric().measure('{"type":"string","pattern":"^[0-9]{4}$"}',
+                                          '{"pattern":"^[0-9]{4}$"}') == 0.0
+
+
 class TestLatencyMetric:
     """Test latency measurement."""
 

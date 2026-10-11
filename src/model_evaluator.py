@@ -226,14 +226,97 @@ class ExactMatchMetric:
             return 0.0
 
 
+def _canonical_pattern(pattern: str) -> str:
+    """
+    Rewrite \\d as an explicit ASCII digit class.
+
+    JSON Schema patterns are ECMA-262 regexes, where \\d means exactly [0-9]. Escaped
+    backslashes are skipped so "\\\\d" (a literal backslash, then d) is left alone.
+    """
+    out = []
+    in_class = False
+    i = 0
+    while i < len(pattern):
+        char = pattern[i]
+        if char == "\\" and i + 1 < len(pattern):
+            escaped = pattern[i + 1]
+            if escaped == "d":
+                out.append("0-9" if in_class else "[0-9]")
+            else:
+                out.append(char + escaped)
+            i += 2
+            continue
+        if char == "[" and not in_class:
+            in_class = True
+        elif char == "]" and in_class:
+            in_class = False
+        out.append(char)
+        i += 1
+    return "".join(out)
+
+
+def _anchored_pattern_width(pattern: str) -> Optional[tuple]:
+    """
+    (min, max) length of the strings a fully anchored pattern accepts, else None.
+
+    Only ^...$ patterns with no top-level alternation qualify: for those the pattern
+    alone fixes the string length, so minLength/maxLength can be checked against it.
+    """
+    try:
+        import re._parser as sre_parse  # Python 3.11+
+    except ImportError:  # pragma: no cover
+        import sre_parse
+    try:
+        parsed = sre_parse.parse(pattern)
+    except Exception:
+        return None
+    items = list(parsed)
+    at = sre_parse.AT
+    if (len(items) < 2
+            or items[0] != (at, sre_parse.AT_BEGINNING)
+            or items[-1] != (at, sre_parse.AT_END)):
+        return None
+    return parsed.getwidth()
+
+
+def _canonical_constraints(constraints: dict) -> dict:
+    """
+    Normalise a constraint dict so equivalent JSON Schema constraints compare equal.
+
+    General rules only - nothing here is specific to a test case:
+    - "type" is dropped: the field's type comes from the schema, not from the rule
+      (SchemaValidMetric checks type compatibility separately);
+    - \\d in patterns becomes [0-9] (ECMA-262 semantics);
+    - minLength/maxLength are dropped when an anchored pattern already implies them,
+      i.e. they do not narrow the set of strings the pattern accepts.
+    """
+    canonical = {k: v for k, v in constraints.items() if k != "type"}
+    pattern = canonical.get("pattern")
+    if not isinstance(pattern, str):
+        return canonical
+
+    canonical["pattern"] = _canonical_pattern(pattern)
+    width = _anchored_pattern_width(canonical["pattern"])
+    if width:
+        min_width, max_width = width
+        if isinstance(canonical.get("minLength"), int) and canonical["minLength"] <= min_width:
+            del canonical["minLength"]
+        if isinstance(canonical.get("maxLength"), int) and canonical["maxLength"] >= max_width:
+            del canonical["maxLength"]
+    return canonical
+
+
 class SemanticMatchMetric:
-    """Metric for checking semantic equivalence (ignoring key order)."""
+    """
+    Metric for checking semantic equivalence: the same constraints, however written.
+
+    Ignores key order and applies the equivalences in _canonical_constraints().
+    ExactMatchMetric stays strict, so reports show both views.
+    """
 
     def measure(self, actual_output: str, expected_output: str) -> float:
         """
         Measure if outputs are semantically equivalent.
-
-        For JSON objects, this means same keys and values regardless of order.
 
         Args:
             actual_output: Model output JSON string
@@ -246,9 +329,8 @@ class SemanticMatchMetric:
             actual = json.loads(actual_output)
             expected = json.loads(expected_output)
 
-            # For dicts, compare as sets of items
             if isinstance(actual, dict) and isinstance(expected, dict):
-                return 1.0 if actual == expected else 0.0
+                actual, expected = _canonical_constraints(actual), _canonical_constraints(expected)
 
             return 1.0 if actual == expected else 0.0
         except (json.JSONDecodeError, TypeError):
