@@ -128,7 +128,7 @@ the existing 3-example prompt). This is the "just call the LLM" option H0 defend
 | JSON-correctness rate | Output parses as a JSON object | ≥ 99% |
 | Schema-valid rate | Constraints legal for the field type (`validate_node_constraints`) | 100% for Hybrid; report as-is for T5-only |
 | Exact-match rate | Output dict `==` expected dict | report; not the primary bar |
-| Semantic-match rate | Same keys/values, order-insensitive | primary correctness metric; within 5pp of B0 |
+| Semantic-match rate | Same constraints however written: order-insensitive, plus the JSON Schema equivalences in `_canonical_constraints()` (**changed after the first results — see §6 "Scoring change"**; pre-registered definition was "same keys/values, order-insensitive") | primary correctness metric; within 5pp of B0 |
 | Latency avg / p99 (ms) | Wall-clock per `interpret()` call | Hybrid (local path) ≥ 5× faster than B0 |
 | Fallback rate | Share of rules the local model could not handle | < 40% (target < 20%) |
 
@@ -213,6 +213,10 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
 - **Conditions:** B0 (prompt-only LLM) vs Hybrid, plus T5-orig alone for context.
 - **Method:** `EvaluationSuite` on the held-out test set; `compare_models` for the head-to-head;
   `group_by_constraint_type()` for the breakdown.
+- **B0 repeats:** B0 is not deterministic even at `temperature=0` (27 of 102 cases changed
+  result between two runs on the same day, both served by DeepInfra/StreamLake). Run B0 three
+  times and report the mean and range, not a single run; the extra runs are in
+  `docs/experiments/expA_b0_repeats/`.
 - **Outputs:** `docs/experiments/expA_<date>_*.json` + a results table in the report.
 
 ### Experiment B — EDA-driven (does rebalancing the training data help?)
@@ -300,6 +304,38 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
   report differences with that caveat and avoid over-claiming small gaps.
 - **`compare_models` runs sequentially**, so latency numbers are sensitive to machine load; run
   on an otherwise-idle machine and report median + p99, not just mean.
+- **Scoring change made after the first results were seen (must be disclosed).** The
+  pre-registered semantic-match metric compared dicts exactly (order aside), so in practice it
+  always equalled exact match. On the first full Experiment A run (2026-10-11, commit `9c1eb51`)
+  it scored B0 at **48.0%**, but 40 of B0's 53 "failures" were correct constraints written
+  differently: an added `"type"` key, `\d` instead of `[0-9]`, and `minLength`/`maxLength` that
+  the pattern already fixed. T5 never shows these because it learned the test set's output style,
+  so the metric was biased towards the local model. Commit `d9a2395` added three general
+  equivalences — no rule refers to a particular test case:
+  1. `"type"` is ignored (the field type comes from the schema; schema-valid rate checks it);
+  2. `\d` ≡ `[0-9]` in patterns (ECMA-262 regex semantics, which JSON Schema uses);
+  3. `minLength`/`maxLength` are ignored when a fully anchored pattern (`^…$`, no top-level `|`)
+     already implies them, i.e. they do not narrow the strings the pattern accepts.
+
+  Safeguards: each rule has unit tests, including cases that must still fail (`\d*` vs `[0-9]+`,
+  `exclusiveMinimum` vs `minimum`, a length bound that narrows the pattern); exact match stays
+  strict and is reported next to semantic match; one arguably-redundant case (an extra date
+  pattern alongside `format: date`) was deliberately *not* given a rule. Re-scoring the same
+  first-run outputs: B0 48.0% → **97.1%**; T5-orig (72.5%) and Hybrid/T5-retrained (77.5%)
+  unchanged. **Effect on the decision:** under the original definition Hybrid passes the
+  correctness threshold (it is 29.5pp *above* B0); under the corrected one it fails it (19.6pp
+  below). The overall verdict does not hinge on this change, because Hybrid also fails the
+  latency threshold (≈2.2× faster vs the 5× required) under either definition. Report both
+  metrics and this paragraph.
+- **Empty-output scoring (harness fix, no effect on reported numbers).** Interpreters return `{}`
+  on failure, which was being scored as valid JSON and schema-valid; a failed-API run of B0 showed
+  100% "valid" with 0% matches. Since `9c1eb51` an empty answer is only valid when no constraint was
+  expected, and the runner aborts on the first failed LLM call instead of scoring it. No T5 run
+  produced an empty answer, so Experiment B is unaffected.
+- **Hybrid fallback never fires on this test set.** The fallback is triggered by invalid T5 output,
+  but all of T5-retrained's wrong answers were well-formed and type-valid, so the fallback rate
+  was 0% and Hybrid behaved exactly like T5-retrained. A validity gate cannot catch confidently
+  wrong answers — a design limitation, not just a tuning issue.
 
 ---
 
@@ -313,5 +349,6 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
 4. Train both adapters locally with the same seeded settings:
    `financial_domain.json` → `adapters/adapter_financial_v1_rebuild` (T5-orig), then
    `financial_domain_combined.json` → `adapters/adapter_financial_v2` (T5-retrained).
-5. Run Experiments A and B; commit reports.
+5. Run Experiments A and B; commit reports. Run B0 three times (§4 Experiment A) and score with
+   the corrected semantic-match metric, disclosing the change (§6 "Scoring change").
 6. Write the methodology section against the §3 structure, with the real numbers in §3.6.
