@@ -61,6 +61,10 @@ EXPERIMENTS = {
 EVAL_FIELD_NAME = "field"
 
 
+class LlmCallError(RuntimeError):
+    """An LLM call failed (bad key, outage, timeout), so the condition's scores are invalid."""
+
+
 class FieldTypeAdapter:
     """
     Adapt a field-aware interpreter to EvaluationSuite's interpret(business_rule) protocol.
@@ -110,15 +114,21 @@ def run_condition(name: str, interpreter, test_cases: List[EvalTestCase]) -> Con
     suite = EvaluationSuite(interpreter=interpreter)
     results = EvaluationResults()
     sources: List[Optional[str]] = []
+    client = getattr(interpreter, "llm_client", None)
+    errors = getattr(client, "error_log", [])
 
     for case in test_cases:
         adapter = interpreter if isinstance(interpreter, FieldTypeAdapter) else None
         if adapter:
             adapter.field_type = case.field_type
+        errors_before = len(errors)
         results.test_results.extend(suite.run([case]).test_results)
+        # OpenRouterClient swallows failures and returns "", which would otherwise be
+        # scored as an empty answer - stop at the first one instead
+        if len(errors) > errors_before:
+            raise LlmCallError(f"{name}: LLM call failed on {case.input!r}: {errors[-1]}")
         sources.append(adapter.source_fn() if adapter and adapter.source_fn else None)
 
-    client = getattr(interpreter, "llm_client", None)
     return ConditionRun(name, results, sources, list(getattr(client, "call_log", [])))
 
 
@@ -320,7 +330,11 @@ def main(argv: Optional[list] = None) -> int:
         except (RuntimeError, FileNotFoundError, ImportError) as e:
             print(f"  Skipped: {e}", file=sys.stderr)
             continue
-        reports[condition] = build_report(run_condition(condition, interpreter, test_cases))
+        try:
+            reports[condition] = build_report(run_condition(condition, interpreter, test_cases))
+        except LlmCallError as e:
+            print(f"Error: {e}\nNo reports written.", file=sys.stderr)
+            return 1
 
     if not reports:
         print("Error: no condition could run.", file=sys.stderr)

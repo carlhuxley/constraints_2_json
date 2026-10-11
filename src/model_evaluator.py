@@ -333,6 +333,11 @@ class EvaluationSuite:
             semantic_match = self.semantic_metric.measure(actual_output, test_case.expected_output) == 1.0
             latency_ms = (end - start) * 1000
 
+            # Interpreters return {} when they fail, so an empty answer only counts as
+            # valid output when the rule was expected to yield no constraints
+            if output_dict == {} and json.loads(test_case.expected_output) != {}:
+                json_correct = schema_valid = False
+
             results.test_results.append(TestResult(
                 input=test_case.input,
                 expected_output=test_case.expected_output,

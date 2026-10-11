@@ -149,3 +149,50 @@ class TestLlmProvenance:
 
         report = rx.build_report(rx.run_condition("T5-orig", FakeT5(), CASES))
         assert "llm_served_by" not in report
+
+
+class TestLlmErrors:
+
+    def test_failed_llm_call_aborts_the_condition(self):
+        """A failed call (bad key, outage) must stop the run, not be scored as an empty answer."""
+        class FakeClient:
+            call_log = []
+            error_log = []
+
+        client = FakeClient()
+
+        def failing_llm(field_name, field_type, rule):
+            client.error_log.append("401 Client Error: Unauthorized")
+            return {}
+
+        adapter = rx.FieldTypeAdapter(failing_llm, llm_client=client)
+        with pytest.raises(rx.LlmCallError, match="B0.*401"):
+            rx.run_condition("B0", adapter, CASES)
+
+    def test_main_writes_no_reports_when_llm_fails(self, tmp_path, monkeypatch):
+        dataset = tmp_path / "cases.json"
+        dataset.write_text(json.dumps({"examples": [
+            {"input": "At least 18", "output": {"minimum": 18}, "field_type": "integer"},
+        ]}))
+
+        class FakeClient:
+            call_log = []
+            error_log = []
+
+        def fake_build(condition, args):
+            client = FakeClient()
+
+            def failing_llm(field_name, field_type, rule):
+                client.error_log.append("401 Client Error: Unauthorized")
+                return {}
+
+            return rx.FieldTypeAdapter(failing_llm, llm_client=client)
+
+        monkeypatch.setattr(rx, "build_interpreter", fake_build)
+        out = tmp_path / "out"
+
+        code = rx.main(["--experiment", "A", "--conditions", "B0",
+                        "--dataset", str(dataset), "--output-dir", str(out)])
+
+        assert code == 1
+        assert not out.exists()

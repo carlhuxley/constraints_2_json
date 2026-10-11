@@ -58,6 +58,14 @@ class TestOpenRouterClient:
         assert result == ""
 
     @patch("requests.post")
+    def test_records_failed_calls(self, mock_post):
+        mock_post.side_effect = Exception("401 Client Error: Unauthorized")
+        client = OpenRouterClient(model="test-model", api_key="test-key")
+        client.complete("test prompt")
+        assert client.error_log == ["401 Client Error: Unauthorized"]
+        assert client.call_log == []
+
+    @patch("requests.post")
     def test_records_model_and_provider_that_served_each_call(self, mock_post):
         mock_response = MagicMock()
         mock_response.json.return_value = {

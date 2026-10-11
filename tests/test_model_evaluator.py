@@ -318,6 +318,33 @@ class TestEvaluationSuite:
         assert results.exact_match_rate == 0.5  # Only one matches exactly
 
 
+    def test_empty_output_is_not_counted_as_valid(self):
+        """{} is what interpreters return on failure, so it must not score as valid output."""
+        from src.model_evaluator import EvaluationSuite, EvalTestCase
+
+        test_cases = [EvalTestCase(input="Must be 18 or older",
+                                   expected_output={"minimum": 18}, field_type="integer")]
+        mock_interpreter = Mock()
+        mock_interpreter.interpret.return_value = {}
+
+        result = EvaluationSuite(interpreter=mock_interpreter).run(test_cases).test_results[0]
+
+        assert result.json_correct is False
+        assert result.schema_valid is False
+
+    def test_empty_output_is_valid_when_no_constraint_expected(self):
+        from src.model_evaluator import EvaluationSuite, EvalTestCase
+
+        test_cases = [EvalTestCase(input="Free text", expected_output={}, field_type="string")]
+        mock_interpreter = Mock()
+        mock_interpreter.interpret.return_value = {}
+
+        result = EvaluationSuite(interpreter=mock_interpreter).run(test_cases).test_results[0]
+
+        assert result.json_correct is True
+        assert result.schema_valid is True
+
+
 class TestModelComparison:
     """Test comparing T5 vs LLM performance."""
 
