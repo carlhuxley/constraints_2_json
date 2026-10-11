@@ -8,6 +8,8 @@ import json
 import os
 from typing import Optional
 
+from .t5_text import format_input, decode_output
+
 # Lazy imports to avoid loading torch when not needed
 _transformers_available = None
 
@@ -123,8 +125,8 @@ class T5Interpreter:
         Returns:
             Dict of JSON Schema constraints (e.g., {"minimum": 18})
         """
-        # Format input as during training
-        input_text = f"convert: {business_rule}"
+        # Same text format as training (see t5_text)
+        input_text = format_input(business_rule)
 
         # Tokenize
         inputs = self.tokenizer(
@@ -144,7 +146,9 @@ class T5Interpreter:
             )
 
         # Decode
-        raw_output = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        raw_output = decode_output(
+            self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        )
 
         # Parse to JSON
         return self._parse_output(raw_output)

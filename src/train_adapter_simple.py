@@ -20,6 +20,8 @@ from torch.utils.data import Dataset, DataLoader
 from torch.optim import AdamW
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, get_linear_schedule_with_warmup
 from peft import LoraConfig, get_peft_model, TaskType
+
+from .t5_text import format_input, format_target
 from tqdm import tqdm
 
 
@@ -36,8 +38,9 @@ class ConstraintDataset(Dataset):
 
     def __getitem__(self, idx):
         example = self.examples[idx]
-        input_text = f"convert: {example['input']}"
-        target_text = json.dumps(example['output'], separators=(',', ':'))
+        # Same text format as inference (see t5_text)
+        input_text = format_input(example['input'])
+        target_text = format_target(example['output'])
 
         inputs = self.tokenizer(
             input_text,
