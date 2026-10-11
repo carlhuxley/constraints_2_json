@@ -229,11 +229,33 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
   (`src/t5_text.py`) with inference — the training data is the only intended difference.
 - **Method:** train both LoRA adapters locally (CPU-only machine — see §5):
   ```
-  python -m src.train_adapter_simple -d training_data/financial_domain.json          -o adapters/adapter_financial_v1_rebuild   # T5-orig, 509
-  python -m src.train_adapter_simple -d training_data/financial_domain_combined.json -o adapters/adapter_financial_v2           # T5-retrained, 787
+  FLAGS="--epochs 10 --learning-rate 1e-3 --batch-size 8"
+  python -m src.train_adapter_simple -d training_data/financial_domain.json          -o adapters/adapter_financial_v1_rebuild $FLAGS  # T5-orig, 509
+  python -m src.train_adapter_simple -d training_data/financial_domain_combined.json -o adapters/adapter_financial_v2           $FLAGS  # T5-retrained, 787
   ```
   then `EvaluationSuite` on both adapters, focusing on the contrastive block via
   `group_by_constraint_type()`.
+- **Hyperparameters (identical for both arms):**
+
+  | Setting | Value | Source |
+  | --- | --- | --- |
+  | Base model | `t5-base` | notebook |
+  | LoRA r / alpha / dropout | 16 / 32 / 0.1 | notebook (matches shipped `adapter_config.json`) |
+  | LoRA target modules | `q`, `v` | notebook |
+  | Epochs | 10 | notebook |
+  | Learning rate | 1e-3, AdamW (weight decay 0.01), linear schedule, 10% warmup | LR from notebook; optimiser/schedule from `train_adapter_simple.py` |
+  | Batch size | 8 | notebook |
+  | Validation split | 10% (shuffled, `seed=42`) | `train_adapter_simple.py` |
+  | Seed | 42 (`random` + `torch`) | `train_adapter_simple.py` |
+  | Adapter kept | `final_adapter` (end of epoch 10); `best_checkpoint` = lowest val loss | `train_adapter_simple.py` |
+
+- **Why not the script defaults:** `train_adapter_simple.py` defaults to 3 epochs, LR 1e-4,
+  batch 4. A first v1 rebuild with those defaults finished at val loss 1.12 and produced unusable
+  output (empty dicts and degenerate repetition such as `18"+"+"+…` for `Age >= 18`). The
+  notebook's settings are used instead, so the rebuild is as close to the shipped adapter's
+  training as the local pipeline allows; the remaining differences are the prompt/text format
+  (`src/t5_text.py`) and the training loop (custom loop vs HF `Trainer`). Record this failed run in the
+  report as a pipeline-validation finding, not as an experimental result.
 - **Outputs:** `adapters/adapter_financial_v1_rebuild/`, `adapters/adapter_financial_v2/`,
   `docs/experiments/expB_<date>_*.json`.
 - **Design limitation to disclose:** 787 is a *superset* of 509, so Experiment B varies both
@@ -249,7 +271,7 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
 | --- | --- |
 | `torch` / `transformers` / `peft` | Present in `.venv` (2.12.0 / 5.8.1 / 0.19.1). Newer than the versions the adapter was trained with (`peft 0.18.1`); loads fine |
 | `t5-base` weights | Cached in `~/.cache/huggingface/hub/models--t5-base` → T5 evaluation and retraining run **offline** |
-| GPU | **None.** `torch.cuda.is_available()` is `False`. Retraining uses `src/train_adapter_simple.py` (forces CPU); budget ~30–90 min for 787 examples × 3 epochs. Alternative: run `notebooks/finetune_t5_lora.ipynb` on free Colab GPU (~30 min) |
+| GPU | **None.** `torch.cuda.is_available()` is `False`. Retraining uses `src/train_adapter_simple.py` (forces CPU); measured ~7.2 s/step at batch 8 → ~70 min for v1 (509 × 10 epochs) and ~110 min for v2 (787 × 10 epochs). Alternative: run `notebooks/finetune_t5_lora.ipynb` on free Colab GPU (~30 min) |
 | LLM baseline (B0) | Needs `OPENROUTER_API_KEY` in `.env` and network access. ~60–100 calls at `temperature=0.0`; trivial cost |
 | Evaluation harness | `src/model_evaluator.py` is complete and tested. Only the `src/evaluate.py` CLI wiring for `--model t5/llm` is missing (stubs at lines 90-99) — either finish those or drive `EvaluationSuite` from a short script |
 
