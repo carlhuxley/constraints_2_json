@@ -56,3 +56,42 @@ class TestOpenRouterClient:
         client = OpenRouterClient(model="test-model", api_key="test-key")
         result = client.complete("test prompt")
         assert result == ""
+
+    @patch("requests.post")
+    def test_records_model_and_provider_that_served_each_call(self, mock_post):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "id": "gen-123",
+            "model": "deepseek/deepseek-chat-v3-0324",
+            "provider": "DeepInfra",
+            "choices": [{"message": {"content": '{"minimum": 18}'}}],
+        }
+        mock_post.return_value = mock_response
+
+        client = OpenRouterClient(model="deepseek/deepseek-chat", api_key="test-key")
+        client.complete("test prompt")
+
+        assert client.call_log == [{
+            "requested_model": "deepseek/deepseek-chat",
+            "model": "deepseek/deepseek-chat-v3-0324",
+            "provider": "DeepInfra",
+            "id": "gen-123",
+        }]
+
+    @patch("requests.post")
+    def test_failed_call_is_not_logged_as_served(self, mock_post):
+        mock_post.side_effect = Exception("API Error")
+        client = OpenRouterClient(model="test-model", api_key="test-key")
+        client.complete("test prompt")
+        assert client.call_log == []
+
+    @patch("requests.post")
+    def test_requests_identify_this_project(self, mock_post):
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": "{}"}}]
+        }
+        OpenRouterClient(model="test-model", api_key="test-key").complete("p")
+
+        headers = mock_post.call_args.kwargs["headers"]
+        assert headers["X-Title"] == "constraints_2_json"
+        assert headers["HTTP-Referer"] == "https://github.com/carlhuxley/constraints_2_json"
