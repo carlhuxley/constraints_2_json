@@ -94,7 +94,7 @@ they are set *before* the results are seen, so the results can *decide* rather t
 
 | Set | Source | Use | Disjoint from |
 | --- | --- | --- | --- |
-| Training | `training_data/financial_domain.json` (509) — original shipped adapter | Train the baseline adapter | Test |
+| Training | `training_data/financial_domain.json` (509) — same data as the original shipped adapter | Train the baseline adapter (local rebuild) | Test |
 | Training+ | `training_data/financial_domain_combined.json` (787 = 509 + 278 supplemental) | Train the retrained adapter (Experiment B) | Test |
 | Validation | 10% ordered/`seed=42` split inside the training file (`src/train_adapter*.py`) | `eval_loss`, early stopping | — |
 | **Held-out test (NEW)** | Hand-authored, ~60–100 rules, none copied from any training file | Score all models | Both training sets |
@@ -117,7 +117,7 @@ the existing 3-example prompt). This is the "just call the LLM" option H0 defend
 | Condition | Engine |
 | --- | --- |
 | B0 | Prompt-only LLM (baseline) |
-| T5-orig | Shipped LoRA adapter alone (`adapters/adapter_financial/final_adapter`) |
+| T5-orig | LoRA adapter rebuilt locally on the 509-example set (`adapters/adapter_financial_v1_rebuild/final_adapter`) — **not** the shipped notebook adapter; see §4 Experiment B |
 | T5-retrained | LoRA adapter retrained on the 787-example combined set |
 | Hybrid | T5-retrained + `validate_node_constraints` gate + LLM fallback |
 
@@ -220,11 +220,22 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
 - **Tests:** "retraining on the balance-corrected 787-example set reduces `>=`/`<=` and
   over-generation errors versus the original 509-example adapter."
 - **Conditions:** T5-orig vs T5-retrained on the *same* held-out test set.
-- **Method:** retrain LoRA via `python -m src.train_adapter_simple --dataset
-  training_data/financial_domain_combined.json --output adapters/adapter_financial_v2`
-  (CPU-only machine — see §5), then `EvaluationSuite` on both adapters, focusing on the contrastive
-  block via `group_by_constraint_type()`.
-- **Outputs:** `adapters/adapter_financial_v2/`, `docs/experiments/expB_<date>_*.json`.
+- **Why the baseline is rebuilt, not the shipped adapter:** the shipped adapter
+  (`adapters/adapter_financial`) was fine-tuned in `notebooks/finetune_t5_lora.ipynb`, which used a
+  different input prefix (`"convert to json schema: "`) and training setup from the local pipeline.
+  Evaluated through local inference it failed for reasons unrelated to its training data, so it
+  cannot serve as a fair baseline. Both arms are therefore trained with the same local script,
+  hyperparameters, and seed (`random` + `torch.manual_seed(42)`), sharing one text format
+  (`src/t5_text.py`) with inference — the training data is the only intended difference.
+- **Method:** train both LoRA adapters locally (CPU-only machine — see §5):
+  ```
+  python -m src.train_adapter_simple -d training_data/financial_domain.json          -o adapters/adapter_financial_v1_rebuild   # T5-orig, 509
+  python -m src.train_adapter_simple -d training_data/financial_domain_combined.json -o adapters/adapter_financial_v2           # T5-retrained, 787
+  ```
+  then `EvaluationSuite` on both adapters, focusing on the contrastive block via
+  `group_by_constraint_type()`.
+- **Outputs:** `adapters/adapter_financial_v1_rebuild/`, `adapters/adapter_financial_v2/`,
+  `docs/experiments/expB_<date>_*.json`.
 - **Design limitation to disclose:** 787 is a *superset* of 509, so Experiment B varies both
   class balance **and** total volume — it answers the real business question ("did the gap-filling
   work?") but is not a clean isolation of the balance factor. A stricter follow-up would hold the
@@ -253,11 +264,13 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
   session. Generalisation to unseen real phrasings is untested.
 - **Single domain.** Only the financial adapter exists. `healthcare_domain.json` (530 examples)
   was never trained into an adapter, so cross-domain claims are unsupported.
-- **Prompt-prefix inconsistency.** Inference and the `train_adapter*.py` scripts use
-  `"convert: "`; `notebooks/finetune_t5_lora.ipynb` uses `"convert to json schema: "`. If the
-  shipped adapter was trained via the notebook, the inference prefix does not match training —
-  this needs confirming before Experiment A, as it would depress T5-orig scores for a reason
-  unrelated to the hypothesis.
+- **Training/inference mismatch (resolved by design).** The shipped adapter was trained in
+  `notebooks/finetune_t5_lora.ipynb` with the `"convert to json schema: "` prefix, while local
+  inference uses `"convert: "`; it failed under local evaluation. Rather than score it, both
+  Experiment B adapters are retrained locally with one shared text format (`src/t5_text.py`).
+  Disclose that the reported T5-orig is a local rebuild on the same 509 examples, not the
+  originally shipped artefact. Residual risk: CPU training may still not be bit-for-bit
+  deterministic across library versions, despite seeding.
 - **Hybrid does not re-validate LLM output by type** before returning it; only the final
   whole-schema validation pass catches an LLM type error, and it *raises* rather than repairing.
   Report schema-valid rate at both the per-field and whole-schema level.
@@ -273,7 +286,10 @@ but only after the deterministic validator; T5 alone was 11pp worse)".
 1. Author `training_data/holdout_financial_test.json` (§3.4 requirements).
 2. Add a `src/evaluate` path or a `scripts/run_experiments.py` that runs `EvaluationSuite` for
    B0 / T5-orig / T5-retrained / Hybrid and writes reports to `docs/experiments/`.
-3. Confirm the training prompt prefix of the shipped adapter (§6).
-4. Retrain on `financial_domain_combined.json` → `adapters/adapter_financial_v2`.
+3. ~~Confirm the training prompt prefix of the shipped adapter (§6).~~ Resolved: the shipped
+   notebook adapter is replaced by a local rebuild (§4 Experiment B).
+4. Train both adapters locally with the same seeded settings:
+   `financial_domain.json` → `adapters/adapter_financial_v1_rebuild` (T5-orig), then
+   `financial_domain_combined.json` → `adapters/adapter_financial_v2` (T5-retrained).
 5. Run Experiments A and B; commit reports.
 6. Write the methodology section against the §3 structure, with the real numbers in §3.6.

@@ -113,6 +113,8 @@ def train(
     # Shuffle and split
     import random
     random.seed(42)
+    # Seed torch too, so LoRA init and DataLoader shuffling repeat across runs
+    torch.manual_seed(42)
     random.shuffle(examples)
 
     split_idx = int(len(examples) * (1 - validation_split))
