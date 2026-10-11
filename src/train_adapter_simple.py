@@ -77,6 +77,17 @@ def load_dataset(path: str) -> list:
     return examples
 
 
+def split_examples(examples: list, validation_split: float = 0.1) -> tuple:
+    """Seeded shuffle + split; returns (train_examples, val_examples)."""
+    import random
+    random.seed(42)
+    examples = list(examples)
+    random.shuffle(examples)
+
+    split_idx = int(len(examples) * (1 - validation_split))
+    return examples[:split_idx], examples[split_idx:]
+
+
 def train(
     dataset_path: str,
     output_dir: str = "adapters/adapter_retrained",
@@ -110,16 +121,10 @@ def train(
     examples = load_dataset(dataset_path)
     print(f"Loaded {len(examples)} examples")
 
-    # Shuffle and split
-    import random
-    random.seed(42)
+    # Shuffle and split (scripts/confidence_calibration.py reuses the split)
     # Seed torch too, so LoRA init and DataLoader shuffling repeat across runs
     torch.manual_seed(42)
-    random.shuffle(examples)
-
-    split_idx = int(len(examples) * (1 - validation_split))
-    train_examples = examples[:split_idx]
-    val_examples = examples[split_idx:]
+    train_examples, val_examples = split_examples(examples, validation_split)
     print(f"Train: {len(train_examples)}, Validation: {len(val_examples)}")
     print()
 
