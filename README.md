@@ -129,6 +129,9 @@ Options:
   --model           LLM model (default: deepseek/deepseek-chat)
   --verbose, -v     Show detailed output
   --collect-training-data   Log successful interpretations for retraining
+  --confidence-threshold    Send T5 answers below this confidence to the LLM (e.g. 0.7)
+  --event-log       Monitoring event log (default: logs/interpreter_events.jsonl)
+  --no-event-log    Don't write monitoring events
 ```
 
 ## Project Structure
@@ -143,6 +146,8 @@ constraints_2_json/
 │   ├── llm_interpreter.py   # LLM API client
 │   ├── schema_validator.py  # Constraint validation
 │   ├── evaluate.py          # Model evaluation CLI
+│   ├── monitoring.py        # Monitoring event log (JSONL)
+│   ├── monitoring_data.py   # Dashboard data layer
 │   └── train_adapter.py     # Adapter training scripts
 ├── adapters/
 │   └── adapter_financial/   # Pre-trained financial domain adapter
@@ -152,6 +157,7 @@ constraints_2_json/
 ├── examples/
 │   ├── financial_schema.json
 │   └── financial_dictionary.csv
+├── dashboard/               # Streamlit monitoring dashboard
 ├── docs/                    # Documentation
 └── tests/                   # Test suite
 ```
@@ -222,6 +228,36 @@ print(f'Exact Match: {report[\"exact_match_rate\"]:.1%}')
 print(f'Schema Valid: {report[\"schema_valid_rate\"]:.1%}')
 "
 ```
+
+## Monitoring
+
+A Streamlit dashboard covers batch evaluation reports and live use of the hybrid interpreter:
+
+```bash
+pip install -r requirements.txt   # includes streamlit and plotly
+streamlit run dashboard/app.py
+```
+
+| Page | Shows | Data |
+|------|-------|------|
+| Batch evaluation | Metric rates per condition, latency distribution, failure drill-down, paired comparison of two conditions (fixed/broken rules, McNemar p) | Experiment reports (default `docs/experiments/`, read-only) |
+| Live monitoring | T5 vs LLM share over time, fallback reasons, T5 confidence vs threshold, latency by source, LLM errors, spend and projected monthly cost, failures stream | Event log |
+| Training data | Examples collected by source, duplicates of existing training data, progress towards a retrain | Event log + `training_data_collected.json` |
+
+**Event log.** When the CLI runs with a T5 adapter, every rule appends one JSON line to
+`logs/interpreter_events.jsonl` (`--event-log` to change, `--no-event-log` to disable). The live
+pages refresh every few seconds, so they update during a run and accumulate across runs.
+
+- `type: "interpret"`: `field_name`, `rule`, `source` (`t5` / `llm` / `none`), `fallback_reason`
+  (`empty` / `invalid` / `low_confidence` / `exception`), `t5_output`, `t5_confidence`,
+  `llm_output`, `llm_error`, `llm_model`, `llm_provider`, `llm_usage` (tokens and OpenRouter's
+  reported `cost` for the interpret call), `llm_total_cost` / `llm_call_count` (every LLM call
+  made for the rule, including paraphrase generation), latencies in ms, `confidence_threshold`.
+- `type: "training_example"`: `rule`, `output`, `source` (`t5` / `llm` / `llm_variation`).
+
+Reports written by `scripts/run_experiments.py` now include per-case rows (`cases`), which the
+latency and drill-down views use. Older reports show median/p99 latency and failures rescored
+from their exact-match failure list.
 
 ## Training
 
