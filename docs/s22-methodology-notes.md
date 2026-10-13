@@ -1,10 +1,9 @@
-# S22 Methodology Notes — Scientific-Method Framing for the EPA Report
+# S22 Methodology Notes — Scientific-Method Framing for the Project Report
 
 > **Status:** working notes, not the final report text.
-> **Purpose:** prepare the *Systematic Methodology* section of the AIL7 EPA proposal so it
-> evidences skill **S22** — *"Apply scientific methods in a systematic process through
-> experimental design, exploratory data analysis and hypothesis testing to facilitate business
-> decision making."*
+> **Purpose:** prepare the *Systematic Methodology* section of the project report so it shows
+> scientific methods applied in a systematic process: experimental design, exploratory data
+> analysis and hypothesis testing to facilitate business decision making.
 >
 > These notes (a) record an honest audit of what evidence the project currently holds, (b) give a
 > drop-in scientific-method structure for the methodology section, and (c) specify the two
@@ -12,9 +11,9 @@
 
 ---
 
-## 1. S22 mapping — what has to be shown, and where it comes from
+## 1. Mapping — what has to be shown, and where it comes from
 
-| S22 clause | What the assessor needs to see | Where it comes from in this project |
+| Aspect | What has to be shown | Where it comes from in this project |
 | --- | --- | --- |
 | **Experimental design** | A stated hypothesis and null position; defined test conditions; a baseline; a held-out dataset; success metrics fixed *before* seeing results | Experiment A (§4). The five metrics already implemented in `src/model_evaluator.py`; a new held-out test set |
 | **Exploratory data analysis** | Analysis of the data that *changed a decision*, not just described it | Constraint-type distribution of the training data → the `>=` vs `<=` imbalance → the 278 supplemental examples (§3.4, §4 Experiment B) |
@@ -25,7 +24,7 @@
 
 ## 2. Current-state evidence audit (be honest about this in the report)
 
-The DLC feedback treats **"83.3% T5 success / 16.7% fallback"** as the project's experimental
+Earlier feedback treated **"83.3% T5 success / 16.7% fallback"** as the project's experimental
 results. **They are not measured results.** Before the methodology section can frame them as
 evidence, this gap has to be closed or disclosed.
 
@@ -42,7 +41,7 @@ evidence, this gap has to be closed or disclosed.
 
 **Implication for the report:** either (preferred) run Experiments A and B below and report the
 real numbers, or explicitly state that 83.3% is an illustrative target and not a measurement.
-Presenting the illustrative figure as a result would be a serious integrity problem in an EPA.
+Presenting the illustrative figure as a result would be a serious integrity problem in the report.
 
 ---
 
@@ -145,7 +144,7 @@ the existing 3-example prompt). This is the "just call the LLM" option H0 defend
    (this is where the `>=`/`<=` story shows up).
 7. Commit all report JSONs under `docs/experiments/` with the git SHA and date.
 
-### 3.5 EDA summary (the part the DLC flagged as descriptive)
+### 3.5 EDA summary (the part earlier feedback flagged as descriptive)
 
 **Finding.** Counting the output shape of every example in `training_data/financial_domain.json`
 (509 examples):
