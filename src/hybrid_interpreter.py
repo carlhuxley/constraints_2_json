@@ -11,6 +11,7 @@ This module provides a hybrid approach that:
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, List, Protocol
@@ -149,6 +150,7 @@ class HybridInterpreter:
         collect_training_data: bool = False,
         training_log_path: Optional[str] = None,
         confidence_threshold: Optional[float] = None,
+        event_logger: Optional[object] = None,
     ):
         """
         Initialize hybrid interpreter.
@@ -163,6 +165,11 @@ class HybridInterpreter:
             confidence_threshold: Fall back to LLM when T5's last_confidence is
                 below this (None disables the check). If the LLM then fails,
                 the valid low-confidence T5 answer is kept.
+            event_logger: Optional monitoring.EventLogger; each interpret() call
+                and collected training example is appended to its event log.
+
+        The failure and training-data files accumulate across runs: records already
+        in them are kept and new ones appended.
         """
         self.t5 = t5_interpreter
         self.llm_client = llm_client
@@ -173,7 +180,30 @@ class HybridInterpreter:
         self.training_log_path = training_log_path or "training_data_collected.json"
         self.confidence_threshold = confidence_threshold
         self._low_confidence_result: Optional[dict] = None
+        self.event_logger = event_logger
+        self._call: dict = {}
         self.stats = HybridStats()
+        self._prior_failures = (
+            self._load_json(self.failure_log_path).get("failures", []) if log_failures else []
+        )
+        prior_training = (
+            self._load_json(self.training_log_path) if collect_training_data else {}
+        )
+        self._prior_examples = prior_training.get("examples", [])
+        self._prior_sources = prior_training.get("sources", {})
+
+    @staticmethod
+    def _load_json(path: str) -> dict:
+        """Read an earlier run's log file; missing or unreadable -> {}."""
+        if not path or not os.path.exists(path):
+            return {}
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f"Could not read existing log {path}: {e}")
+            return {}
 
     def interpret(
         self,
@@ -194,6 +224,36 @@ class HybridInterpreter:
         Returns:
             Dict of JSON Schema constraints
         """
+        self._call = {
+            "fallback_reason": None,
+            "validation_errors": [],
+            "t5_output": None,
+            "t5_confidence": None,
+            "t5_latency_ms": None,
+            "llm_output": None,
+            "llm_latency_ms": None,
+            "llm_calls": [],
+            "llm_errors": [],
+        }
+        # Every LLM call made for this rule (incl. paraphrase generation) counts towards its cost
+        call_log = getattr(self.llm_client, "call_log", None)
+        calls_before = len(call_log) if isinstance(call_log, list) else 0
+        start = time.perf_counter()
+        result = self._interpret(field_name, field_type, business_rule)
+        if self.event_logger is not None:
+            all_calls = call_log[calls_before:] if isinstance(call_log, list) else []
+            costs = [c["usage"]["cost"] for c in all_calls
+                     if isinstance(c.get("usage"), dict) and c["usage"].get("cost") is not None]
+            self._emit_interpret_event(
+                field_name, field_type, business_rule, result,
+                (time.perf_counter() - start) * 1000,
+                llm_total_cost=sum(costs) if costs else None,
+                llm_call_count=len(all_calls),
+            )
+        return result
+
+    def _interpret(self, field_name: str, field_type: str, business_rule: str) -> dict:
+        """Routing behind interpret(): T5, then LLM fallback."""
         self.stats.total_calls += 1
         self.last_source = None
         self._low_confidence_result = None
@@ -255,10 +315,18 @@ class HybridInterpreter:
         Returns:
             Constraints dict if successful, None if failed
         """
+        call = self._call
         try:
+            start = time.perf_counter()
             result = self.t5.interpret(business_rule)
+            call["t5_latency_ms"] = (time.perf_counter() - start) * 1000
+            call["t5_output"] = result
+            confidence = getattr(self.t5, "last_confidence", None)
+            if isinstance(confidence, (int, float)):
+                call["t5_confidence"] = confidence
 
             if not result:
+                call["fallback_reason"] = "empty"
                 self._log_failure(
                     field_name, field_type, business_rule,
                     {}, ["Empty output from T5"]
@@ -270,6 +338,8 @@ class HybridInterpreter:
             errors = validate_node_constraints(test_node, field_name)
 
             if errors:
+                call["fallback_reason"] = "invalid"
+                call["validation_errors"] = errors
                 self._log_failure(
                     field_name, field_type, business_rule,
                     result, errors
@@ -279,6 +349,7 @@ class HybridInterpreter:
             if self.confidence_threshold is not None:
                 confidence = getattr(self.t5, "last_confidence", None)
                 if confidence is not None and confidence < self.confidence_threshold:
+                    call["fallback_reason"] = "low_confidence"
                     self.stats.low_confidence += 1
                     self._low_confidence_result = result
                     self._log_failure(
@@ -291,6 +362,8 @@ class HybridInterpreter:
 
         except Exception as e:
             logger.exception(f"T5 interpretation error: {e}")
+            call["fallback_reason"] = "exception"
+            call["validation_errors"] = [f"Exception: {str(e)}"]
             self._log_failure(
                 field_name, field_type, business_rule,
                 {}, [f"Exception: {str(e)}"]
@@ -314,6 +387,14 @@ class HybridInterpreter:
         Returns:
             Constraints dict if successful, None if failed
         """
+        call = self._call
+        # The client's own logs say which model/provider served the call, its usage
+        # and cost, or why it failed; take whatever this call appended
+        call_log = getattr(self.llm_client, "call_log", None)
+        error_log = getattr(self.llm_client, "error_log", None)
+        calls_before = len(call_log) if isinstance(call_log, list) else 0
+        errors_before = len(error_log) if isinstance(error_log, list) else 0
+        start = time.perf_counter()
         try:
             from .llm_interpreter import interpret_business_rule
 
@@ -323,6 +404,7 @@ class HybridInterpreter:
                 business_rule=business_rule,
                 llm_client=self.llm_client,
             )
+            call["llm_output"] = result
 
             # Update the last failure record with LLM result
             if self.stats.failures and self.log_failures:
@@ -333,7 +415,56 @@ class HybridInterpreter:
 
         except Exception as e:
             logger.exception(f"LLM interpretation error: {e}")
+            call["llm_errors"].append(str(e))
             return None
+
+        finally:
+            call["llm_latency_ms"] = (time.perf_counter() - start) * 1000
+            if isinstance(call_log, list):
+                call["llm_calls"].extend(call_log[calls_before:])
+            if isinstance(error_log, list):
+                call["llm_errors"].extend(error_log[errors_before:])
+
+    def _emit_interpret_event(
+        self,
+        field_name: str,
+        field_type: str,
+        business_rule: str,
+        output: dict,
+        total_latency_ms: float,
+        llm_total_cost: Optional[float] = None,
+        llm_call_count: int = 0,
+    ) -> None:
+        """Append one interpret event to the monitoring log."""
+        call = self._call
+        llm_call = call["llm_calls"][-1] if call["llm_calls"] else {}
+        try:
+            self.event_logger.log(
+                "interpret",
+                field_name=field_name,
+                field_type=field_type,
+                rule=business_rule,
+                source=self.last_source,
+                fallback_reason=call["fallback_reason"],
+                validation_errors=call["validation_errors"],
+                t5_output=call["t5_output"],
+                t5_confidence=call["t5_confidence"],
+                t5_latency_ms=call["t5_latency_ms"],
+                llm_output=call["llm_output"],
+                llm_latency_ms=call["llm_latency_ms"],
+                llm_error="; ".join(call["llm_errors"]) or None,
+                llm_model=llm_call.get("model"),
+                llm_provider=llm_call.get("provider"),
+                llm_usage=llm_call.get("usage"),
+                llm_call_count=llm_call_count,
+                llm_total_cost=llm_total_cost,
+                output=output,
+                total_latency_ms=total_latency_ms,
+                confidence_threshold=self.confidence_threshold,
+            )
+        except Exception as e:
+            # Monitoring must never break interpretation
+            logger.error(f"Failed to write monitoring event: {e}")
 
     def _log_failure(
         self,
@@ -370,8 +501,8 @@ class HybridInterpreter:
 
         try:
             data = {
-                "stats": self.stats.to_dict(),
-                "failures": [f.to_dict() for f in self.stats.failures],
+                "stats": self.stats.to_dict(),  # this run only
+                "failures": self._prior_failures + [f.to_dict() for f in self.stats.failures],
             }
             with open(self.failure_log_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
@@ -392,7 +523,10 @@ class HybridInterpreter:
         count = 0
         for variation in variations:
             if variation != business_rule:
-                self._log_training_data(field_name, field_type, variation, output, "llm")
+                self._log_training_data(
+                    field_name, field_type, variation, output, "llm",
+                    event_source="llm_variation",
+                )
                 count += 1
         if count:
             self.stats.variations_generated += count
@@ -405,10 +539,24 @@ class HybridInterpreter:
         business_rule: str,
         output: dict,
         source: str,
+        event_source: Optional[str] = None,
     ) -> None:
         """Log a successful interpretation for training data collection."""
         if not self.collect_training_data:
             return
+
+        if self.event_logger is not None:
+            try:
+                self.event_logger.log(
+                    "training_example",
+                    rule=business_rule,
+                    output=output,
+                    field_name=field_name,
+                    field_type=field_type,
+                    source=event_source or source,
+                )
+            except Exception as e:
+                logger.error(f"Failed to write monitoring event: {e}")
 
         record = TrainingRecord(
             timestamp=datetime.now().isoformat(),
@@ -432,14 +580,18 @@ class HybridInterpreter:
             return
 
         try:
+            examples = self._prior_examples + [
+                r.to_training_example() for r in self.stats.training_log
+            ]
             data = {
                 "collected_at": datetime.now().isoformat(),
-                "total_examples": len(self.stats.training_log),
+                "total_examples": len(examples),
                 "sources": {
-                    "t5": sum(1 for r in self.stats.training_log if r.source == "t5"),
-                    "llm": sum(1 for r in self.stats.training_log if r.source == "llm"),
+                    src: self._prior_sources.get(src, 0)
+                    + sum(1 for r in self.stats.training_log if r.source == src)
+                    for src in ("t5", "llm")
                 },
-                "examples": [r.to_training_example() for r in self.stats.training_log],
+                "examples": examples,
             }
             with open(self.training_log_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
@@ -491,6 +643,8 @@ def create_hybrid_interpreter(
     failure_log_path: Optional[str] = None,
     collect_training_data: bool = False,
     training_log_path: Optional[str] = None,
+    confidence_threshold: Optional[float] = None,
+    event_logger: Optional[object] = None,
 ) -> HybridInterpreter:
     """
     Create a hybrid interpreter with optional T5 and LLM.
@@ -503,6 +657,8 @@ def create_hybrid_interpreter(
         failure_log_path: Path for failure log
         collect_training_data: Whether to log successful interpretations
         training_log_path: Path to write collected training data
+        confidence_threshold: Fall back to LLM below this T5 confidence (None = off)
+        event_logger: Optional monitoring.EventLogger for live monitoring
 
     Returns:
         Configured HybridInterpreter
@@ -538,4 +694,6 @@ def create_hybrid_interpreter(
         failure_log_path=failure_log_path,
         collect_training_data=collect_training_data,
         training_log_path=training_log_path,
+        confidence_threshold=confidence_threshold,
+        event_logger=event_logger,
     )

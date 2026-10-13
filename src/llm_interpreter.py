@@ -7,6 +7,7 @@ business rules and convert them to structured JSON Schema constraints.
 import json
 import os
 import re
+import time
 from typing import Optional, Protocol
 
 import requests
@@ -68,8 +69,11 @@ class OpenRouterClient:
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": temperature,
+            # Ask OpenRouter to report tokens and cost; it does not change the answer
+            "usage": {"include": True},
         }
 
+        start = time.perf_counter()
         try:
             response = requests.post(
                 self.api_url,
@@ -85,6 +89,8 @@ class OpenRouterClient:
                 "model": result.get("model"),
                 "provider": result.get("provider"),
                 "id": result.get("id"),
+                "usage": result.get("usage"),
+                "latency_ms": (time.perf_counter() - start) * 1000,
             })
             return content
         except Exception as e:

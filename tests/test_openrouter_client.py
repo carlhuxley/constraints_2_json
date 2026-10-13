@@ -79,12 +79,37 @@ class TestOpenRouterClient:
         client = OpenRouterClient(model="deepseek/deepseek-chat", api_key="test-key")
         client.complete("test prompt")
 
-        assert client.call_log == [{
+        (entry,) = client.call_log
+        assert {k: entry[k] for k in ("requested_model", "model", "provider", "id")} == {
             "requested_model": "deepseek/deepseek-chat",
             "model": "deepseek/deepseek-chat-v3-0324",
             "provider": "DeepInfra",
             "id": "gen-123",
-        }]
+        }
+
+    @patch("requests.post")
+    def test_records_usage_cost_and_latency(self, mock_post):
+        usage = {"prompt_tokens": 120, "completion_tokens": 8, "cost": 0.000041}
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": '{"minimum": 18}'}}],
+            "usage": usage,
+        }
+        client = OpenRouterClient(model="test-model", api_key="test-key")
+        client.complete("test prompt")
+
+        (entry,) = client.call_log
+        assert entry["usage"] == usage
+        assert entry["latency_ms"] >= 0
+
+    @patch("requests.post")
+    def test_requests_usage_accounting(self, mock_post):
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": "{}"}}]
+        }
+        OpenRouterClient(model="test-model", api_key="test-key").complete("p")
+
+        sent = json.loads(mock_post.call_args.kwargs["data"])
+        assert sent["usage"] == {"include": True}
 
     @patch("requests.post")
     def test_failed_call_is_not_logged_as_served(self, mock_post):

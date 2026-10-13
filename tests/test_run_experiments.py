@@ -63,6 +63,20 @@ class TestRunCondition:
         assert report["by_constraint_type"]["maxLength"]["semantic_match_rate"] == 0.0
         assert report["p99_latency_ms"] >= report["median_latency_ms"]
 
+    def test_report_has_one_case_row_per_test(self):
+        hybrid = FakeHybrid()
+        adapter = rx.FieldTypeAdapter(hybrid.interpret, source_fn=lambda: hybrid.last_source)
+
+        report = rx.build_report(rx.run_condition("Hybrid", adapter, CASES))
+
+        first, second = report["cases"]
+        assert first["input"] == "At least 18"
+        assert first["semantic_match"] is True and first["source"] == "t5"
+        assert second["constraint_type"] == "maxLength"
+        assert second["semantic_match"] is False and second["source"] == "llm"
+        assert second["actual"] == '{"maxLength":99}'
+        assert all(c["latency_ms"] >= 0 for c in report["cases"])
+
 
 class TestWriteReports:
 
