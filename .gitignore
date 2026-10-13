@@ -32,3 +32,6 @@ audit.json
 # Training artefacts (final_adapter/ is tracked; checkpoints and logs are not)
 adapters/*/best_checkpoint/
 adapters/*/train.log
+
+# Monitoring event log (dashboard reads it; not versioned)
+logs/

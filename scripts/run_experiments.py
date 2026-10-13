@@ -152,6 +152,23 @@ def build_report(run: ConditionRun) -> dict:
         for ctype, group in sorted(run.results.group_by_constraint_type().items())
     }
 
+    # Per-case rows let the dashboard plot latency distributions and drill into failures
+    report["cases"] = [
+        {
+            "input": r.input,
+            "expected": r.expected_output,
+            "actual": r.actual_output,
+            "field_type": r.field_type,
+            "constraint_type": r.constraint_type,
+            "exact_match": r.exact_match,
+            "semantic_match": r.semantic_match,
+            "schema_valid": r.schema_valid,
+            "latency_ms": r.latency_ms,
+            "source": source,
+        }
+        for r, source in zip(run.results.test_results, run.sources)
+    ]
+
     routed = [s for s in run.sources if s is not None]
     if routed:
         report["routing"] = {source: routed.count(source) for source in sorted(set(routed))}

@@ -21,6 +21,7 @@ from .enricher import enrich_schema
 from .llm_interpreter import OpenRouterClient
 from .schema_validator import SchemaValidationError
 from .hybrid_interpreter import create_hybrid_interpreter
+from .monitoring import DEFAULT_EVENT_LOG, EventLogger
 
 
 def create_llm_client(provider: str, model: str):
@@ -115,6 +116,23 @@ def main(argv: Optional[list] = None) -> int:
         default="training_data_collected.json",
         help="Path to save collected training data (default: training_data_collected.json)"
     )
+    parser.add_argument(
+        "--confidence-threshold",
+        type=float,
+        help="Send T5 answers whose least certain token is below this probability to the LLM "
+             "(e.g. 0.7; default: off)"
+    )
+    parser.add_argument(
+        "--event-log",
+        default=DEFAULT_EVENT_LOG,
+        help=f"Append monitoring events (one JSON line per rule) here; read by the dashboard "
+             f"(default: {DEFAULT_EVENT_LOG})"
+    )
+    parser.add_argument(
+        "--no-event-log",
+        action="store_true",
+        help="Do not write monitoring events"
+    )
 
     args = parser.parse_args(argv)
 
@@ -137,6 +155,8 @@ def main(argv: Optional[list] = None) -> int:
             log_failures=True,
             collect_training_data=args.collect_training_data,
             training_log_path=args.training_log if args.collect_training_data else None,
+            confidence_threshold=args.confidence_threshold,
+            event_logger=None if args.no_event_log else EventLogger(args.event_log),
         )
 
     try:
