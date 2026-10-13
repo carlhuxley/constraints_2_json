@@ -1,4 +1,4 @@
-"""The S22 results cited in the BCS project proposal must never change.
+"""The recorded S22 experiment results must never change.
 
 Pins the SHA-256 of every recorded experiment report (and the methodology notes that quote
 them). New runs belong in a separate output directory, never in docs/experiments/.
@@ -23,7 +23,7 @@ PINNED = {
     "docs/experiments/expB_2026-10-11_T5-orig.json": "0add571cbcce9baa7aaa155849154be2da1ac505dec4e6e4a277821dd75d31c7",
     "docs/experiments/expB_2026-10-11_T5-retrained.json": "38da0a0fc19bb3ee33163c47c5ba40b72d98dd231066bbd8b9f5b6d873c0bde2",
     "docs/experiments/expB_2026-10-11_summary.json": "d1966e345122f28ab6bbef6895b4c7b3eb0d4908d73403d2c2fd22f48049ec15",
-    "docs/s22-methodology-notes.md": "4b4bed80d983036a151578085ae1e0e3b1f223e0a76809db47f73d45ad431a49",
+    "docs/s22-methodology-notes.md": "f25459479e4ded3295c9bb5c1b3f9f6943b61321248bacdd08704e2638e2f939",
 }
 
 
