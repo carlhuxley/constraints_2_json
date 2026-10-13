@@ -1,5 +1,16 @@
-"""Shared colours and helpers for the dashboard pages."""
+"""Shared colours and helpers for the dashboard pages.
+
+Every page imports this first: it puts the repo root on sys.path so `src` imports
+work however Streamlit runs the page (Streamlit only adds dashboard/ itself).
+"""
+import os
+import sys
+
 import streamlit as st
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 # The same source keeps the same colour on every chart
 SOURCE_COLOURS = {"t5": "#2b6cb0", "llm": "#dd6b20", "none": "#a0aec0",

@@ -1,6 +1,7 @@
 """Smoke tests: each dashboard page renders without exceptions on fixture data."""
 import json
 import os
+import subprocess
 import sys
 
 import pytest
@@ -20,7 +21,7 @@ def dashboard_on_path(monkeypatch):
 
 
 def run_page(name, **state):
-    at = AppTest.from_file(os.path.join(DASHBOARD, "pages", f"{name}.py"), default_timeout=30)
+    at = AppTest.from_file(os.path.join(DASHBOARD, "views", f"{name}.py"), default_timeout=30)
     for key, value in state.items():
         at.session_state[key] = value
     at.run()
@@ -97,3 +98,38 @@ def test_app_entry_point_runs_default_page():
     at.run()
     assert not at.exception, at.exception
     assert at.title[0].value == "Batch evaluation"
+
+
+@pytest.mark.parametrize("page,title", [
+    ("views/live.py", "Live monitoring"),
+    ("views/training.py", "Training data collection"),
+])
+def test_navigating_from_the_app_to_each_page(page, title, event_log, monkeypatch):
+    monkeypatch.setenv("C2J_EVENT_LOG", event_log)
+    at = AppTest.from_file(os.path.join(DASHBOARD, "app.py"), default_timeout=30)
+    at.run()
+    at.switch_page(page)
+    at.run()
+    assert not at.exception, at.exception
+    assert at.title[0].value == title
+
+
+def test_no_legacy_pages_folder():
+    """A dashboard/pages/ folder makes Streamlit run pages without app.py (legacy
+    multipage mode), so `src` imports fail on every page but the first."""
+    assert not os.path.exists(os.path.join(DASHBOARD, "pages"))
+
+
+@pytest.mark.parametrize("page", ["batch", "live", "training"])
+def test_page_imports_work_without_repo_root_on_path(page, tmp_path):
+    """Streamlit only puts dashboard/ on sys.path; each page must find src itself."""
+    repo = os.path.dirname(DASHBOARD)
+    code = (
+        "import runpy, sys\n"
+        f"sys.path = [{DASHBOARD!r}] + [p for p in sys.path if p not in ('', {repo!r})]\n"
+        f"runpy.run_path({os.path.join(DASHBOARD, 'views', page + '.py')!r})\n"
+    )
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env,
+                            capture_output=True, text=True, timeout=120)
+    assert "ModuleNotFoundError" not in result.stderr, result.stderr

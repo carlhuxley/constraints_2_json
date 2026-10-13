@@ -255,6 +255,16 @@ pages refresh every few seconds, so they update during a run and accumulate acro
   made for the rule, including paraphrase generation), latencies in ms, `confidence_threshold`.
 - `type: "training_example"`: `rule`, `output`, `source` (`t5` / `llm` / `llm_variation`).
 
+**Simulated stream.** To see the live pages without real traffic, replay the held-out rules
+through the real hybrid (real T5 and confidence gate; the LLM replays B0's recorded answers with
+synthetic latency, cost and errors). It writes only to `logs/simulated_*`:
+
+```bash
+python -m scripts.simulate_live --reset            # terminal 1
+C2J_EVENT_LOG=logs/simulated_events.jsonl C2J_COLLECTED=logs/simulated_collected.json \
+    streamlit run dashboard/app.py                 # terminal 2
+```
+
 Reports written by `scripts/run_experiments.py` now include per-case rows (`cases`), which the
 latency and drill-down views use. Older reports show median/p99 latency and failures rescored
 from their exact-match failure list.
