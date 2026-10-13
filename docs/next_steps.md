@@ -24,7 +24,7 @@ This document outlines recommendations for scaling, risk mitigation, and stakeho
 | Schema Enrichment Pipeline | ✅ Complete | Fully functional |
 | Data Dictionary Parsing | ✅ Complete | CSV support |
 | LLM Interpretation (OpenRouter) | ✅ Complete | ~500-2000ms latency |
-| T5 Local Inference | ✅ Complete | ~50-100ms latency, 83% success rate |
+| T5 Local Inference | ✅ Complete | ~50-100ms latency, 83% success rate (illustrative, not measured; see note below) |
 | Hybrid Interpreter (T5 + LLM fallback) | ✅ Complete | Cost-optimized |
 | Schema Validation | ✅ Complete | JSON Schema Draft 7 |
 | Evaluation Metrics | ✅ Complete | 5 custom metrics |
@@ -48,6 +48,10 @@ This document outlines recommendations for scaling, risk mitigation, and stakeho
 **Priority:** High
 
 The T5 model currently achieves 83% success rate. Target: 95%+
+
+> **Note:** the 83% figure above is illustrative, not a measured result. On the held-out test set
+> (S22 experiments, October 2026), T5 alone scored 77.5% semantic match and the hybrid with a 0.7
+> confidence gate 89.2%, with 19.6% of rules sent to the LLM. See `docs/s22-methodology-notes.md` §3.6.
 
 **Actions:**
 - [ ] Add 50+ email/format training examples
