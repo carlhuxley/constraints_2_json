@@ -96,7 +96,7 @@ they are set *before* the results are seen, so the results can *decide* rather t
 | Training | `training_data/financial_domain.json` (509) — same data as the original shipped adapter | Train the baseline adapter (local rebuild) | Test |
 | Training+ | `training_data/financial_domain_combined.json` (787 = 509 + 278 supplemental) | Train the retrained adapter (Experiment B) | Test |
 | Validation | 10% ordered/`seed=42` split inside the training file (`src/train_adapter*.py`) | `eval_loss`, early stopping | — |
-| **Held-out test (NEW)** | Hand-authored, ~60–100 rules, none copied from any training file | Score all models | Both training sets |
+| **Held-out test (NEW)** | Written for testing, ~60–100 rules, none copied from any training file (as built: 102 rules drafted with an LLM, leakage-checked and reviewed before freezing) | Score all models | Both training sets |
 
 The held-out test set is the missing piece. Requirements:
 - stratified by constraint type in roughly the production proportions
@@ -186,7 +186,7 @@ in or measured. Experiment B closes that loop.
 **Data-quality checks applied** (from `docs/training_workflow.md:155-164`): every example has
 `input` + `output`; outputs are valid JSON Schema constraint objects; contrastive pairs now
 present; diverse values used; multiple phrasings per pattern. A residual risk — train/test leakage
-— is the reason the held-out test set must be hand-authored rather than sampled from the training
+— is the reason the held-out test set must be written separately rather than sampled from the training
 files.
 
 ### 3.6 Results as evidence
@@ -351,11 +351,15 @@ rule-text consistency check) and the local path runs on faster hardware.
 
 ## 6. Limitations & threats to validity (for the report's limitations section)
 
-- **Synthetic training data.** All training examples are hand-authored/templated, not sampled from
+- **Synthetic training data.** All training examples are synthetic, not sampled from
   real production dictionaries. The active-learning collection path exists
   (`training_data_collected.json`) but only ever captured 2 examples, and the LLM
   variation-generation augmentation (`generate_rule_variations`) has never actually run in a saved
   session. Generalisation to unseen real phrasings is untested.
+- **LLM-drafted test set.** The 102 held-out rules were drafted with an LLM (see the `provenance`
+  field of `training_data/holdout_financial_test.json`), paraphrased away from the training files,
+  leakage-checked against them, and reviewed and approved before freezing. The B0 baseline is also
+  an LLM, so the test set may favour LLM-style phrasing; disclose this alongside the results.
 - **Single domain.** Only the financial adapter exists. `healthcare_domain.json` (530 examples)
   was never trained into an adapter, so cross-domain claims are unsupported.
 - **Training/inference mismatch (resolved by design).** The shipped adapter was trained in
