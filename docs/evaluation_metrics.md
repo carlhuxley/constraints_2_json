@@ -130,7 +130,8 @@ In addition to evaluation metrics, the `HybridInterpreter` tracks operational me
 | `t5_success_rate` | Percentage handled by T5 |
 | `fallback_rate` | Percentage requiring LLM |
 
-**Example Output:**
+**Example output** (illustrative: shows the format only, not a measured result; for measured
+results see `docs/s22-methodology-notes.md` §3.6):
 ```
 Interpreter stats:
   Total calls: 18
