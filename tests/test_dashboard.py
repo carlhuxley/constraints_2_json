@@ -133,3 +133,52 @@ def test_page_imports_work_without_repo_root_on_path(page, tmp_path):
     result = subprocess.run([sys.executable, "-c", code], cwd=tmp_path, env=env,
                             capture_output=True, text=True, timeout=120)
     assert "ModuleNotFoundError" not in result.stderr, result.stderr
+
+
+class TestStreamSwitch:
+
+    @pytest.fixture
+    def simulated_stream(self, monkeypatch, event_log, tmp_path):
+        """Point 'Simulated' at a fixture log, not the real logs/ folder."""
+        from src import monitoring
+        paths = (event_log, str(tmp_path / "sim_collected.json"))
+        monkeypatch.setitem(monitoring.STREAMS, "Simulated", paths)
+        monkeypatch.delenv("C2J_EVENT_LOG", raising=False)
+        monkeypatch.delenv("C2J_COLLECTED", raising=False)
+        return paths
+
+    def app(self):
+        return AppTest.from_file(os.path.join(DASHBOARD, "app.py"), default_timeout=30)
+
+    def test_defaults_to_real(self, simulated_stream):
+        from src.monitoring import STREAMS
+        at = self.app()
+        at.run()
+        assert at.radio(key="stream").value == "Real"
+        assert at.session_state.event_log == STREAMS["Real"][0]
+        assert at.session_state.collected_path == STREAMS["Real"][1]
+
+    def test_switching_to_simulated_points_live_page_at_its_log(self, simulated_stream):
+        at = self.app()
+        at.run()
+        at.radio(key="stream").set_value("Simulated").run()
+        assert (at.session_state.event_log, at.session_state.collected_path) == simulated_stream
+
+        at.switch_page("views/live.py")
+        at.run()
+        assert not at.exception, at.exception
+        assert {m.label: m.value for m in at.metric}["Rules interpreted"] == "2"
+
+    def test_switching_back_restores_real_paths(self, simulated_stream):
+        from src.monitoring import STREAMS
+        at = self.app()
+        at.run()
+        at.radio(key="stream").set_value("Simulated").run()
+        at.radio(key="stream").set_value("Real").run()
+        assert at.session_state.event_log == STREAMS["Real"][0]
+
+    def test_env_var_starts_on_simulated(self, simulated_stream, monkeypatch):
+        monkeypatch.setenv("C2J_EVENT_LOG", simulated_stream[0])
+        at = self.app()
+        at.run()
+        assert at.radio(key="stream").value == "Simulated"

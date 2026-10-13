@@ -13,10 +13,9 @@ and the real code writes the events. Only the LLM is replayed:
 Everything is written to separate simulation files under logs/, never to the CLI's
 real event log or the tracked training-data files.
 
-Usage (from the repo root), with the dashboard running in another terminal:
+Usage (from the repo root), with the dashboard running in another terminal
+(`streamlit run dashboard/app.py`, then choose Stream: Simulated in the sidebar):
     python -m scripts.simulate_live --reset
-    C2J_EVENT_LOG=logs/simulated_events.jsonl C2J_COLLECTED=logs/simulated_collected.json \\
-        streamlit run dashboard/app.py
 """
 import argparse
 import json
@@ -31,14 +30,16 @@ from typing import Dict, Optional
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.hybrid_interpreter import HybridInterpreter  # noqa: E402
-from src.monitoring import EventLogger  # noqa: E402
+from src.monitoring import (  # noqa: E402
+    SIMULATED_COLLECTED,
+    SIMULATED_EVENT_LOG,
+    SIMULATED_FAILURES,
+    EventLogger,
+)
 
 DEFAULT_RULES = "training_data/holdout_financial_test.json"
 DEFAULT_ADAPTER = "adapters/adapter_financial_v2/final_adapter"
 DEFAULT_B0_REPORT = "docs/experiments/expA_2026-10-11_B0.json"
-SIM_EVENT_LOG = "logs/simulated_events.jsonl"
-SIM_COLLECTED = "logs/simulated_collected.json"
-SIM_FAILURES = "logs/simulated_failures.json"
 
 
 def recorded_llm_answers(report_path: str, rules: list) -> Dict[str, dict]:
@@ -101,9 +102,9 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--adapter", default=DEFAULT_ADAPTER)
     parser.add_argument("--b0-report", default=DEFAULT_B0_REPORT)
     parser.add_argument("--confidence-threshold", type=float, default=0.7)
-    parser.add_argument("--event-log", default=SIM_EVENT_LOG)
-    parser.add_argument("--collected", default=SIM_COLLECTED)
-    parser.add_argument("--failures", default=SIM_FAILURES)
+    parser.add_argument("--event-log", default=SIMULATED_EVENT_LOG)
+    parser.add_argument("--collected", default=SIMULATED_COLLECTED)
+    parser.add_argument("--failures", default=SIMULATED_FAILURES)
     parser.add_argument("--delay", type=float, default=1.0,
                         help="Extra seconds between rules, to make the stream watchable")
     parser.add_argument("--llm-latency-ms", type=float, default=1400.0)
