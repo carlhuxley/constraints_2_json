@@ -5,7 +5,7 @@ import streamlit as st
 
 from dash_common import SOURCE_COLOURS, dollars, pct, setting
 from src import monitoring_data as md
-from src.monitoring import DEFAULT_EVENT_LOG
+from src.monitoring import DEFAULT_EVENT_LOG, SIMULATED_EVENT_LOG
 
 st.title("Live monitoring")
 path = setting("event_log", DEFAULT_EVENT_LOG)
@@ -35,11 +35,16 @@ def live_view():
         calls = [e for e in calls if e["run_id"] == run]
 
     if not calls:
-        st.info(f"No interpret events in `{path}` yet. Run the CLI with a T5 adapter, e.g.\n\n"
-                "`python -m src.main -s examples/financial_schema.json "
-                "-d examples/financial_dictionary.csv "
-                "--adapter adapters/adapter_financial_v2/final_adapter "
-                "--confidence-threshold 0.7 -o enriched.json`")
+        if path == SIMULATED_EVENT_LOG:
+            hint = "Start the simulated stream:\n\n`python -m scripts.simulate_live --reset`"
+        else:
+            hint = ("Run the CLI with a T5 adapter, e.g.\n\n"
+                    "`python -m src.main -s examples/financial_schema.json "
+                    "-d examples/financial_dictionary.csv "
+                    "--adapter adapters/adapter_financial_v2/final_adapter "
+                    "--confidence-threshold 0.7 -o enriched.json`\n\n"
+                    "or switch **Stream** in the sidebar to *Simulated*.")
+        st.info(f"No interpret events in `{path}` yet. {hint}")
         return
 
     s = md.summarize(events, rules_per_day=setting("rules_per_day", 10_000))

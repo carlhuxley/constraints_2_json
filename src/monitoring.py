@@ -12,6 +12,18 @@ from datetime import datetime
 from typing import Optional
 
 DEFAULT_EVENT_LOG = "logs/interpreter_events.jsonl"
+DEFAULT_COLLECTED = "training_data_collected.json"
+
+# scripts/simulate_live.py writes a replayed stream here, apart from real use
+SIMULATED_EVENT_LOG = "logs/simulated_events.jsonl"
+SIMULATED_COLLECTED = "logs/simulated_collected.json"
+SIMULATED_FAILURES = "logs/simulated_failures.json"
+
+# (event log, collected training data) for each stream the dashboard can show
+STREAMS = {
+    "Real": (DEFAULT_EVENT_LOG, DEFAULT_COLLECTED),
+    "Simulated": (SIMULATED_EVENT_LOG, SIMULATED_COLLECTED),
+}
 
 
 class EventLogger:

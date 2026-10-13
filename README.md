@@ -257,13 +257,15 @@ pages refresh every few seconds, so they update during a run and accumulate acro
 
 **Simulated stream.** To see the live pages without real traffic, replay the held-out rules
 through the real hybrid (real T5 and confidence gate; the LLM replays B0's recorded answers with
-synthetic latency, cost and errors). It writes only to `logs/simulated_*`:
+synthetic latency, cost and errors). It writes only to `logs/simulated_*`. Start the dashboard,
+set **Stream** in the sidebar to *Simulated*, then run:
 
 ```bash
-python -m scripts.simulate_live --reset            # terminal 1
-C2J_EVENT_LOG=logs/simulated_events.jsonl C2J_COLLECTED=logs/simulated_collected.json \
-    streamlit run dashboard/app.py                 # terminal 2
+python -m scripts.simulate_live --reset
 ```
+
+`.streamlit/config.toml` runs the server headless (no attempt to open a browser, which fails
+under WSL): open the printed URL yourself, e.g. http://localhost:8501.
 
 Reports written by `scripts/run_experiments.py` now include per-case rows (`cases`), which the
 latency and drill-down views use. Older reports show median/p99 latency and failures rescored
