@@ -1,0 +1,13 @@
+# Streamlit settings for the monitoring dashboard (streamlit run dashboard/app.py).
+# Read from the directory streamlit is started in, so run it from the repo root.
+
+[server]
+# Don't try to open a browser on start (fails under WSL with "gio: ... Operation not
+# supported"); open the printed URL yourself, e.g. http://localhost:8501
+headless = true
+# Poll for edited files. This is what Streamlit picks under WSL anyway; setting it
+# explicitly drops the "Detected WSL" notice and works on any OS.
+fileWatcherType = "poll"
+
+[browser]
+gatherUsageStats = false
